@@ -5,7 +5,7 @@
 * **Date**: 2026-05-18
 * **Status**: **APPROVED / READY FOR IMPLEMENTATION**
 * **Target Release**: Version 1.0.0 (Internal Admin Portal)
-* **Tech Stack Reference**: Separate React/Next.js Project, Shared Supabase Database, Cloudflare R2 (S3-Compatible Object Storage), Midtrans Snap/Core API, Resend Email Service.
+* **Tech Stack Reference**: Separate React/Next.js Project, TanStack Query (Data Fetching), TanStack Table (Data Grids), Shared Supabase Database, Cloudflare R2 (S3-Compatible Object Storage), Midtrans Snap/Core API, Resend Email Service.
 
 ---
 
@@ -88,7 +88,7 @@ CREATE TABLE public.admin_audit_logs (
 * **FR-1.3 (Fintech Insights)**: Menampilkan rata-rata nilai *Emergency Runway* dan persentase alokasi pengeluaran global pengguna berdasarkan kerangka 50/30/20 untuk keperluan riset produk secara anonim.
 
 ### 3.2 Module 2: User & Gamification Administration
-* **FR-2.1 (User Directory)**: Menyediakan tabel data pengguna terdaftar lengkap dengan fitur pencarian nama/email, pemfilteran berdasarkan level, status akun (Aktif/Ditangguhkan), dan tipe paket langganan.
+* **FR-2.1 (User Directory)**: Menyediakan tabel data pengguna terdaftar lengkap dengan fitur pencarian nama/email, pemfilteran berdasarkan level, status akun (Aktif/Ditangguhkan), dan tipe paket langganan (Ditenagai oleh **TanStack Table** untuk performa tinggi dan rendering efisien).
 * **FR-2.2 (Account Action)**: Admin diizinkan menangguhkan (*suspend*) akun pengguna yang melanggar ketentuan layanan secara instan dengan satu klik.
 * **FR-2.3 (XP Console Adjustment)**: Menyediakan antarmuka untuk menyesuaikan XP dan Level pengguna secara manual disertai dengan pengisian alasan penyesuaian untuk riwayat audit.
 * **FR-2.4 (Badge CRUD Panel)**:
@@ -146,7 +146,7 @@ Untuk menghindari kerusakan data dan tumpang tindih logika bisnis, batasan tegas
 ### 5.2 Performance & Reliability
 * **Data Refresh Rate**: Dashboard metrik bisnis admin menggunakan revalidation data minimal 5 menit sekali (caching) untuk menghindari lonjakan beban query database Supabase.
 * **Blog Loading Time**: Halaman blog pengguna wajib dimuat dalam waktu kurang dari **1.5 detik** menggunakan static caching (ISR), dengan pemicu regenerasi otomatis (*on-demand revalidation*) sesaat setelah admin menekan tombol publikasi di Admin App.
-* **Vercel React Best Practices Compliance**: Seluruh pengembangan wajib mematuhi standar ketat dari modul keterampilan `.agents/skills/vercel-react-best-practices/SKILL.md`. Ini termasuk mengeliminasi *waterfall network requests* dan memaksimalkan penggunaan React Server Components (RSC) untuk merender tabel data kompleks.
+* **Vercel React Best Practices Compliance**: Seluruh pengembangan wajib mematuhi standar ketat dari modul keterampilan `.agents/skills/vercel-react-best-practices/SKILL.md`. Ini termasuk mengeliminasi *waterfall network requests* dan memaksimalkan penggunaan React Server Components (RSC) dikombinasikan dengan **TanStack Query** untuk *state management* asinkron, serta **TanStack Table** untuk merender tabel data kompleks berkinerja tinggi.
 
 ### 5.3 UI/UX Design Guidelines (Wise Admin Console Style)
 * **Visual Theme**: Mengadopsi modifikasi Wise Theme dengan warna aksen utama **Wise Cyan** (`#70e6e8` / `rgb(112, 230, 232)`) dipadukan dengan Near Black (`#0e0f0c`).

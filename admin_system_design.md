@@ -12,7 +12,7 @@ Karena Admin System didefinisikan sebagai proyek terpisah (*separate repository/
 flowchart TD
     subgraph Client Apps
         UA[User App - Next.js]
-        AS[Admin System - Next.js Full-Stack]
+        AS[Admin System - Next.js Full-Stack + TanStack]
     end
 
     subgraph Supabase Shared Platform
@@ -105,8 +105,12 @@ Mengingat Admin System memegang kendali penuh atas database (bypassing RLS), mod
    * Router Admin System harus memeriksa token JWT pengguna menggunakan metadata Supabase. Jika profil pengguna tidak memiliki `role = 'admin'`, akses ditolak secara mutlak pada tingkat *edge* middleware sebelum halaman apa pun dirender.
 3. **Penyimpanan Service Role Key**:
    * *Supabase Service Role Key* **tidak boleh** ditaruh di lingkungan sisi klien (*Client-Side Environment* seperti `NEXT_PUBLIC_...`). Key ini wajib disimpan dengan aman di server environment variabel sistem admin dan hanya diakses melalui Server Actions atau API Route internal server-to-server.
-4. **Vercel React Best Practices Compliance**:
+4. **Vercel React Best Practices & TanStack Ecosystem**:
    * Seluruh penulisan kode React/Next.js wajib mematuhi standar performa ketat dari `.agents/skills/vercel-react-best-practices/SKILL.md`. Ini meminimalkan pembengkakan *bundle size* dan mengeliminasi masalah *waterfall network requests*.
+   * Pendekatan *Data Fetching* akan dikelola melalui integrasi **TanStack Query** pada komponen klien untuk memberikan kapabilitas caching, re-fetching latar belakang, dan optimasi status (*loading/error states*).
+   * Presentasi tabel direktori menggunakan **TanStack Table** untuk *headless UI grid* yang mendukung *client-side pagination, sorting*, dan pemfilteran cepat.
+5. **TanStack Migration (State & Data Management)**:
+   * Menghindari penggunaan Global State statis (seperti Zustand) untuk sinkronisasi data server. Sebagai gantinya, mengadopsi **TanStack Query** untuk manajemen status asinkron, *caching*, dan revalidasi, serta **TanStack Table** untuk merender antarmuka data tabular dengan sangat efisien.
 
 ---
 
