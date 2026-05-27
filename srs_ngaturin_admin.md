@@ -75,7 +75,7 @@ Fungsi utama yang didukung oleh perangkat lunak ini meliputi:
 ### 2.5 Design and Implementation Constraints
 * **RLS Non-Interference**: Modifikasi skema basis data di Admin App tidak boleh merusak kebijakan Row Level Security (RLS) milik User App.
 * **Server-Side Key Isolation**: *Supabase Service Role Key* wajib tersimpan secara terisolasi di sisi server (`process.env.SUPABASE_SERVICE_ROLE_KEY`) dan dilarang keras bocor ke bundel Javascript sisi klien.
-* **Vercel React Best Practices Compliance**: Seluruh penulisan kode React dan Next.js (termasuk *data fetching*, manajemen *state*, dan optimasi *bundle size*) **wajib mematuhi** panduan standar performa tinggi Vercel yang telah didefinisikan pada dokumen `.agents/skills/vercel-react-best-practices/SKILL.md`. Pelanggaran terhadap *waterfall network requests* (`async-`), performa sisi server (`server-`), dan ukuran *bundle* (`bundle-`) tidak dapat ditoleransi.
+* **Vercel React Best Practices Compliance**: Seluruh penulisan kode React dan Next.js (termasuk *data fetching*, manajemen *state*, dan optimasi *bundle size*) **wajib mematuhi** panduan standar performa tinggi Vercel yang telah didefinisikan pada dokumen `.agents/skills/vercel-react-best-practices/SKILL.md`. Pelanggaran terhadap *waterfall network requests* (`async-`), performa sisi server (`server-`), dan ukuran *bundle* (`bundle-`) tidak dapat ditoleransi. Pengelolaan asinkron state wajib menggunakan **TanStack Query**, dan tabel data kompleks wajib dirender dengan **TanStack Table**.
 
 ### 2.6 Software Folder Directory Structure (Next.js 16 Gold Standard)
 Untuk menjamin kerapian kode, modularitas sistem, dan kemudahan pemeliharaan (*maintainability*), Admin System wajib diimplementasikan menggunakan struktur direktori terpadu berikut:
@@ -142,6 +142,7 @@ ngaturin-admin/
 * **Responsive Layout**: Menggunakan sidebar kolapsibel pada layar lebar (>992px) yang bertransisi menjadi panel navigasi bottom bar/sheet pada layar seluler (<768px).
 
 #### 3.1.2 Software Interfaces
+* **TanStack Query & Table**: Digunakan secara ekstensif untuk *data fetching*, manajemen *state* asinkron (menggantikan Zustand untuk urusan data server), dan pembuatan *data grid* (tabel) yang kaya fitur dan berkinerja tinggi.
 * **Supabase JS Client (`@supabase/supabase-js`)**: Untuk interaksi database CRUD (bypass RLS menggunakan Service Role Key) dan pemicu Admin Auth API.
 * **Midtrans Node SDK (`midtrans-client`)**: Antarmuka API Core/Snap untuk pelacakan transaksi dan eksekusi pengembalian dana (*refund*).
 * **Yahoo Finance API (`yahoo-finance2`)**: Untuk memverifikasi simbol instrumen investasi saat admin mendaftarkan aset baru.
