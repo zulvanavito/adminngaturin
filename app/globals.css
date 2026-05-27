@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme {
+  /* Main Colors */
+  --color-background: #ffffff;
+  --color-foreground: #0e0f0c;
+  
+  --color-primary: #9fe870;
+  --color-primary-foreground: #163300;
+  
+  --color-wise-green: #9fe870;
+  --color-wise-green-dark: #163300;
+  --color-light-mint: #e2f6d5;
+  --color-pastel-green: #cdffad;
+  --color-near-black: #0e0f0c;
+  --color-light-surface: #e8ebe6;
+  --color-wise-gray: #868685;
+  
+  /* Border & Muted Colors for @apply */
+  --color-border: rgba(14, 15, 12, 0.12);
+  --color-muted: #868685;
+  --color-muted-foreground: #454745;
+  
+  /* Radius Scale */
+  --radius-wise-sm: 10px;
+  --radius-wise-md: 16px;
+  --radius-wise-lg: 30px;
+  --radius-wise-xl: 40px;
+  --radius-wise-pill: 9999px;
+
+  /* Typography */
+  --font-display: var(--font-inter), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+
+  /* Animation Presets */
+  --animate-wise-hover: scale(1.05);
+  --animate-wise-active: scale(0.95);
+}
+
+@layer base {
+  * {
+    /* Tailwind v4 requires --color-border to be defined in @theme for border-border utility */
+    @apply border-border;
+    font-feature-settings: "calt" 1;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    font-weight: 600; /* Default weight 600 as per design system */
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 0.85;
+  }
+}
+
+@layer components {
+  .btn-pill {
+    @apply rounded-full px-4 py-1.5 font-semibold transition-transform duration-200;
+  }
+  
+  .btn-pill:hover {
+    transform: scale(1.05);
+  }
+  
+  .btn-pill:active {
+    transform: scale(0.95);
+  }
+
+  .btn-primary {
+    @apply rounded-full px-4 py-1.5 font-semibold transition-transform duration-200 bg-wise-green text-wise-green-dark;
+  }
+
+  .btn-primary:hover {
+    transform: scale(1.05);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.95);
+  }
+
+  .btn-secondary {
+    @apply rounded-full px-4 py-1.5 font-semibold transition-transform duration-200 bg-near-black/5 text-near-black;
+  }
+
+  .btn-secondary:hover {
+    transform: scale(1.05);
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.95);
+  }
+
+  .wise-card {
+    @apply rounded-wise-md border border-border bg-white p-6 shadow-[rgba(14,15,12,0.12)_0px_0px_0px_1px];
+  }
+}
