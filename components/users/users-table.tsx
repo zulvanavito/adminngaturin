@@ -28,7 +28,6 @@ import {
     ChevronLeft, 
     ChevronRight, 
     RefreshCcw, 
-    MoreHorizontal,
     Trash2,
     Ban,
     UserCheck,
@@ -75,9 +74,9 @@ export function UsersTable({ data }: UsersTableProps) {
   }
 
   const bulkMutation = useMutation({
-    mutationFn: async ({ type, payload }: { type: string, payload: any }) => {
-        if (type === 'suspend') return bulkSuspendUsersAction(payload.ids, payload.status)
-        if (type === 'delete') return bulkDeleteUsersAction(payload.ids, payload.reason)
+    mutationFn: async ({ type, payload }: { type: string, payload: { ids: string[], status?: 'active' | 'suspended', reason?: string } }) => {
+        if (type === 'suspend') return bulkSuspendUsersAction(payload.ids, payload.status!)
+        if (type === 'delete') return bulkDeleteUsersAction(payload.ids, payload.reason!)
     },
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -86,7 +85,7 @@ export function UsersTable({ data }: UsersTableProps) {
         setBulkDeleteReason('')
         alert('Bulk action successful')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
         alert(`Bulk Error: ${error.message}`)
     }
   })

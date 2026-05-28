@@ -6,8 +6,7 @@ import {
   Ban, 
   Trash2, 
   UserCheck,
-  AlertTriangle,
-  Info
+  AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CombinedUser } from '@/types/user'
@@ -46,10 +45,10 @@ export function UserActions({ user }: UserActionsProps) {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
 
   const mutation = useMutation({
-    mutationFn: async ({ type, payload }: { type: string, payload: any }) => {
-      if (type === 'xp') return adjustXpAction(user.user_id, payload.amount, payload.reason)
-      if (type === 'suspend') return suspendUserAction(user.user_id, payload.status)
-      if (type === 'delete') return deleteUserAction(user.user_id, payload.reason)
+    mutationFn: async ({ type, payload }: { type: string, payload: { amount?: number; reason?: string; status?: string } }) => {
+      if (type === 'xp') return adjustXpAction(user.user_id, payload.amount!, payload.reason!)
+      if (type === 'suspend') return suspendUserAction(user.user_id, payload.status as 'active' | 'suspended')
+      if (type === 'delete') return deleteUserAction(user.user_id, payload.reason!)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -62,7 +61,7 @@ export function UserActions({ user }: UserActionsProps) {
       setDeleteModalReason('')
       setIsConfirmingDelete(false)
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       alert(`Error: ${error.message}`)
     }
   })
@@ -215,7 +214,7 @@ export function UserActions({ user }: UserActionsProps) {
                 <DialogTitle className="text-red-600">Critical: Permanent Deletion</DialogTitle>
             </div>
             <DialogDescription>
-                This action is irreversible. It will wipe ALL data for <span className="font-black text-near-black">{user.email}</span> across all tables to comply with PDP "Right to be Forgotten".
+                This action is irreversible. It will wipe ALL data for <span className="font-black text-near-black">{user.email}</span> across all tables to comply with PDP &quot;Right to be Forgotten&quot;.
             </DialogDescription>
           </DialogHeader>
           

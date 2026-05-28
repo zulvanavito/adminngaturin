@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { CombinedUser } from '@/types/user'
+import { CombinedUser, UserRole, UserStatus } from '@/types/user'
 import { revalidatePath } from 'next/cache'
 
 export async function getUsersAction(): Promise<CombinedUser[]> {
@@ -25,15 +25,18 @@ export async function getUsersAction(): Promise<CombinedUser[]> {
   if (gamificationRes.error) console.warn('Gamification data fetch failed:', gamificationRes.error.message)
   if (authRes.error) console.warn('Auth data RPC failed:', authRes.error.message)
 
-  const gamificationMap = new Map((gamificationRes.data || []).map((g: any) => [g.user_id, g]))
-  const authMap = new Map((authRes.data || []).map((u: any) => [u.id, u]))
+  const gamificationMap = new Map<string, { xp: number; level: number; current_streak: number }>((gamificationRes.data || []).map((g: { user_id: string; xp: number; level: number; current_streak: number }) => [g.user_id, g]))
+  const authMap = new Map<string, { email: string; full_name: string }>((authRes.data || []).map((u: { id: string; email: string; full_name: string }) => [u.id, u]))
 
-  const users: CombinedUser[] = (profilesRes.data || []).map((profile: any) => {
+  const users: CombinedUser[] = (profilesRes.data || []).map((profile: { user_id: string; role: UserRole; status: UserStatus; created_at: string }) => {
     const authData = authMap.get(profile.user_id)
     const gamificationData = gamificationMap.get(profile.user_id)
     
     return {
-      ...profile,
+      user_id: profile.user_id,
+      role: profile.role,
+      status: profile.status,
+      created_at: profile.created_at,
       email: authData?.email,
       display_name: authData?.full_name,
       gamification: gamificationData || { xp: 0, level: 1, current_streak: 0 }
