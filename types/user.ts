@@ -8,6 +8,7 @@ export interface CombinedUser {
   created_at: string;
   email?: string;
   display_name?: string;
+  plan: 'free' | 'plus' | 'pro';
   gamification: {
     xp: number;
     level: number;
