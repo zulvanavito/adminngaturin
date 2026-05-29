@@ -12,7 +12,7 @@ export interface BlogPost {
   status: BlogStatus;
   is_featured: boolean;
   author_id: string;
-  published_at?: string;
+  published_at?: string | null;
   created_at: string;
   updated_at: string;
 }
