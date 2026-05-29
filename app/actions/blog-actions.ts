@@ -117,6 +117,100 @@ export async function upsertBlogPostAction(data: CreateBlogPost & { id?: string 
     }
   })
 
+  // ISR Revalidation to User App
+  if (result.data.status === 'published') {
+    try {
+      const userAppUrl = process.env.NEXT_PUBLIC_USER_APP_URL;
+      const secret = process.env.BLOG_REVALIDATION_SECRET;
+      if (userAppUrl && secret) {
+        await Promise.all([
+          fetch(`${userAppUrl}/api/revalidate?path=/blog&secret=${secret}`, { method: 'POST' }),
+          fetch(`${userAppUrl}/api/revalidate?path=/blog/${result.data.slug}&secret=${secret}`, { method: 'POST' })
+        ]);
+      }
+    } catch (e) {
+      console.warn('User App ISR Revalidation failed:', e);
+    }
+  }
+
   revalidatePath('/blog')
   return { success: true, data: result.data }
+}
+
+/**
+ * Deletes a blog post.
+ */
+export async function deleteBlogPostAction(id: string) {
+  const adminSupabase = createAdminClient()
+  const publicSupabase = await createClient()
+
+  // Get current admin user
+  const { data: { user } } = await publicSupabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  // Role enforcement
+  const { data: profile, error: profileError } = await adminSupabase
+    .from('user_profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profileError || !profile) {
+    throw new Error('Could not verify user role')
+  }
+
+  if (profile.role !== 'admin' && profile.role !== 'moderator') {
+    throw new Error('Insufficient permissions')
+  }
+
+  // Get post details before deletion for revalidation and audit log
+  const { data: post, error: fetchError } = await adminSupabase
+    .from('blog_posts')
+    .select('slug, status, title')
+    .eq('id', id)
+    .single()
+
+  if (fetchError || !post) {
+    throw new Error('Blog post not found')
+  }
+
+  const { error: deleteError } = await adminSupabase
+    .from('blog_posts')
+    .delete()
+    .eq('id', id)
+
+  if (deleteError) {
+    console.error('Error deleting blog post:', deleteError)
+    throw new Error(deleteError.message)
+  }
+
+  // Record action in audit logs
+  await adminSupabase.from('admin_audit_logs').insert({
+    admin_id: user.id,
+    action: 'DELETE_BLOG_POST',
+    details: {
+      post_id: id,
+      slug: post.slug,
+      title: post.title
+    }
+  })
+
+  // ISR Revalidation if it was published
+  if (post.status === 'published') {
+    try {
+      const userAppUrl = process.env.NEXT_PUBLIC_USER_APP_URL;
+      const secret = process.env.BLOG_REVALIDATION_SECRET;
+      if (userAppUrl && secret) {
+        await Promise.all([
+          fetch(`${userAppUrl}/api/revalidate?path=/blog&secret=${secret}`, { method: 'POST' }),
+          fetch(`${userAppUrl}/api/revalidate?path=/blog/${post.slug}&secret=${secret}`, { method: 'POST' })
+        ]);
+      }
+    } catch (e) {
+      console.warn('User App ISR Revalidation failed:', e);
+    }
+  }
+
+  revalidatePath('/blog')
+  return { success: true }
 }
