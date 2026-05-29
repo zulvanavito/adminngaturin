@@ -125,3 +125,68 @@ export async function getAuditLogsAction() {
     admin_email: authMap.get(log.admin_id)?.email
   }))
 }
+
+export async function getDashboardMetricsAction() {
+  const adminSupabase = createAdminClient()
+  const now = new Date().toISOString()
+
+  // 1. Parallel Aggregation for Performance
+  const [usersRes, activeSubsRes, revenueRes] = await Promise.all([
+    adminSupabase.from('user_profiles').select('*', { count: 'exact', head: true }),
+    adminSupabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'settlement').gt('current_period_end', now),
+    adminSupabase.from('subscriptions').select('amount').eq('status', 'settlement')
+  ])
+
+  if (usersRes.error) throw new Error(usersRes.error.message)
+  if (activeSubsRes.error) throw new Error(activeSubsRes.error.message)
+  if (revenueRes.error) throw new Error(revenueRes.error.message)
+
+  const totalUsers = usersRes.count || 0
+  const activeSubscribers = activeSubsRes.count || 0
+  const totalRevenue = (revenueRes.data || []).reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
+
+  // 2. Fetch last 7 days of settlement subscriptions for trend chart
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  sevenDaysAgo.setHours(0, 0, 0, 0)
+
+  const { data: trendData, error: trendError } = await adminSupabase
+    .from('subscriptions')
+    .select('amount, created_at')
+    .eq('status', 'settlement')
+    .gt('created_at', sevenDaysAgo.toISOString())
+    .order('created_at', { ascending: true })
+
+  if (trendError) throw new Error(trendError.message)
+
+  // 3. Aggregate daily revenue for the last 7 days
+  const dailyMap = new Map<string, number>()
+  
+  // Initialize map with last 7 days (including today)
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    dailyMap.set(dateStr, 0)
+  }
+
+  (trendData || []).forEach(sub => {
+    const dateStr = new Date(sub.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    if (dailyMap.has(dateStr)) {
+      dailyMap.set(dateStr, (dailyMap.get(dateStr) || 0) + Number(sub.amount))
+    }
+  })
+
+  const revenueTrend = Array.from(dailyMap.entries()).map(([name, total]) => ({
+    name,
+    total
+  }))
+
+  return {
+    totalUsers,
+    activeSubscribers,
+    totalRevenue,
+    revenueTrend,
+    timestamp: new Date().toISOString()
+  }
+}
