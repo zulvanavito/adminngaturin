@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils'
 import { BillingActions } from './billing-actions'
 import { reconcileBatchAction } from '@/app/actions/billing-actions'
 import { RefreshCcw, Loader2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useFilterStore } from '@/lib/store/filter-store'
 
 import Fuse from 'fuse.js'
 
@@ -34,10 +35,19 @@ interface BillingTableProps {
 }
 
 export function BillingTable({ data }: BillingTableProps) {
+  const { billing: billingFilters, setFilter } = useFilterStore()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = React.useState('')
   const [isReconciling, setIsReconciling] = React.useState(false)
   const [reconcileProgress, setReconcileProgress] = React.useState(0)
+
+  // Sync global store filters to TanStack table column filters
+  const columnFilters = React.useMemo(() => {
+    const filters = []
+    if (billingFilters.status) filters.push({ id: 'status', value: billingFilters.status })
+    if (billingFilters.plan_id) filters.push({ id: 'plan_id', value: billingFilters.plan_id })
+    return filters
+  }, [billingFilters])
 
   // Fuzzy search logic with Fuse.js
   const filteredData = React.useMemo(() => {
@@ -155,20 +165,51 @@ export function BillingTable({ data }: BillingTableProps) {
     getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
+      columnFilters,
     },
   })
+
+  const filterSelectStyle = "bg-near-black/5 rounded-wise-pill px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none border-none cursor-pointer hover:bg-near-black/10 transition-colors"
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-wise-gray" />
-          <input
-            placeholder="Search transactions..."
-            value={globalFilter ?? ''}
-            onChange={(event) => setGlobalFilter(event.target.value)}
-            className="w-full rounded-wise-pill border border-border bg-white pl-10 pr-4 py-2 text-sm font-semibold outline-none focus:ring-1 focus:ring-wise-cyan transition-all"
-          />
+        <div className="flex items-center gap-4">
+            <div className="relative w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-wise-gray" />
+            <input
+                placeholder="Search transactions..."
+                value={globalFilter ?? ''}
+                onChange={(event) => setGlobalFilter(event.target.value)}
+                className="w-full rounded-wise-pill border border-border bg-white pl-10 pr-4 py-2 text-sm font-semibold outline-none focus:ring-1 focus:ring-wise-cyan transition-all"
+            />
+            </div>
+
+            <div className="flex items-center gap-2">
+                <select 
+                  value={billingFilters.status}
+                  onChange={(e) => setFilter('billing', 'status', e.target.value)}
+                  className={filterSelectStyle}
+                >
+                    <option value="">Status: All</option>
+                    <option value="settlement">Settlement</option>
+                    <option value="pending">Pending</option>
+                    <option value="expire">Expire</option>
+                    <option value="deny">Deny</option>
+                    <option value="cancel">Cancel</option>
+                </select>
+
+                <select 
+                  value={billingFilters.plan_id}
+                  onChange={(e) => setFilter('billing', 'plan_id', e.target.value)}
+                  className={filterSelectStyle}
+                >
+                    <option value="">Plan: All</option>
+                    <option value="free">Free</option>
+                    <option value="plus">Plus</option>
+                    <option value="pro">Pro</option>
+                </select>
+            </div>
         </div>
 
         <div className="flex items-center gap-4 flex-1 justify-end">
