@@ -28,7 +28,6 @@ import {
     ChevronLeft, 
     ChevronRight, 
     RefreshCcw, 
-    MoreHorizontal,
     Trash2,
     Ban,
     UserCheck,
@@ -75,9 +74,9 @@ export function UsersTable({ data }: UsersTableProps) {
   }
 
   const bulkMutation = useMutation({
-    mutationFn: async ({ type, payload }: { type: string, payload: any }) => {
-        if (type === 'suspend') return bulkSuspendUsersAction(payload.ids, payload.status)
-        if (type === 'delete') return bulkDeleteUsersAction(payload.ids, payload.reason)
+    mutationFn: async ({ type, payload }: { type: string, payload: { ids: string[], status?: 'active' | 'suspended', reason?: string } }) => {
+        if (type === 'suspend') return bulkSuspendUsersAction(payload.ids, payload.status!)
+        if (type === 'delete') return bulkDeleteUsersAction(payload.ids, payload.reason!)
     },
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -86,7 +85,7 @@ export function UsersTable({ data }: UsersTableProps) {
         setBulkDeleteReason('')
         alert('Bulk action successful')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
         alert(`Bulk Error: ${error.message}`)
     }
   })
@@ -149,6 +148,23 @@ export function UsersTable({ data }: UsersTableProps) {
           {row.getValue('status') || 'active'}
         </span>
       ),
+    },
+    {
+      accessorKey: 'plan',
+      header: 'Plan',
+      cell: ({ row }) => {
+        const plan = row.getValue('plan') as string
+        return (
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+            plan === 'pro' ? "bg-purple-100 text-purple-700" : 
+            plan === 'plus' ? "bg-blue-100 text-blue-700" : 
+            "bg-gray-100 text-gray-500"
+          )}>
+            {plan}
+          </span>
+        )
+      },
     },
     {
       accessorKey: 'gamification.level',

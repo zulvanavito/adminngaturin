@@ -2,14 +2,14 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { CombinedUser } from '@/types/user'
+import { CombinedUser, UserRole, UserStatus } from '@/types/user'
 import { revalidatePath } from 'next/cache'
 
 export async function getUsersAction(): Promise<CombinedUser[]> {
   const adminSupabase = createAdminClient()
 
   // 1. Fetch all data in parallel to avoid waterfalls
-  const [profilesRes, gamificationRes, authRes] = await Promise.all([
+  const [profilesRes, gamificationRes, authRes, subsRes] = await Promise.all([
     adminSupabase
       .from('user_profiles')
       .select('user_id, role, status, created_at')
@@ -17,25 +17,36 @@ export async function getUsersAction(): Promise<CombinedUser[]> {
     adminSupabase
       .from('gamification_profiles')
       .select('user_id, xp, level, current_streak'),
-    adminSupabase.rpc('get_auth_users_data')
+    adminSupabase.rpc('get_auth_users_data'),
+    adminSupabase
+      .from('subscriptions')
+      .select('user_id, plan_id')
+      .eq('status', 'settlement')
+      .gt('current_period_end', new Date().toISOString())
   ])
 
   if (profilesRes.error) throw new Error(profilesRes.error.message)
   
   if (gamificationRes.error) console.warn('Gamification data fetch failed:', gamificationRes.error.message)
   if (authRes.error) console.warn('Auth data RPC failed:', authRes.error.message)
+  if (subsRes.error) console.warn('Subscriptions data fetch failed:', subsRes.error.message)
 
-  const gamificationMap = new Map((gamificationRes.data || []).map((g: any) => [g.user_id, g]))
-  const authMap = new Map((authRes.data || []).map((u: any) => [u.id, u]))
+  const gamificationMap = new Map<string, { xp: number; level: number; current_streak: number }>((gamificationRes.data || []).map((g: { user_id: string; xp: number; level: number; current_streak: number }) => [g.user_id, g]))
+  const authMap = new Map<string, { email: string; full_name: string }>((authRes.data || []).map((u: { id: string; email: string; full_name: string }) => [u.id, u]))
+  const activeSubsMap = new Map<string, string>((subsRes.data || []).map((s: { user_id: string; plan_id: string }) => [s.user_id, s.plan_id]))
 
-  const users: CombinedUser[] = (profilesRes.data || []).map((profile: any) => {
+  const users: CombinedUser[] = (profilesRes.data || []).map((profile: { user_id: string; role: UserRole; status: UserStatus; created_at: string }) => {
     const authData = authMap.get(profile.user_id)
     const gamificationData = gamificationMap.get(profile.user_id)
     
     return {
-      ...profile,
+      user_id: profile.user_id,
+      role: profile.role,
+      status: profile.status,
+      created_at: profile.created_at,
       email: authData?.email,
       display_name: authData?.full_name,
+      plan: (activeSubsMap.get(profile.user_id) as 'free' | 'plus' | 'pro') || 'free',
       gamification: gamificationData || { xp: 0, level: 1, current_streak: 0 }
     }
   })
@@ -238,6 +249,49 @@ export async function bulkDeleteUsersAction(targetUserIds: string[], reason: str
       user_ids: targetUserIds,
       reason: reason,
       compliance: 'PDP_RIGHT_TO_BE_FORGOTTEN'
+    }
+  })
+
+  revalidatePath('/users')
+  return { success: true }
+}
+
+export async function grantManualSubscriptionAction(targetUserId: string, planId: 'plus' | 'pro', durationDays: number, reason: string) {
+  const adminSupabase = createAdminClient()
+  const publicSupabase = await createClient()
+
+  const { data: { user: admin } } = await publicSupabase.auth.getUser()
+  if (!admin) throw new Error('Unauthorized')
+
+  const now = new Date()
+  const endDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000))
+  const orderId = `MANUAL-${targetUserId.substring(0,8)}-${now.getTime()}`
+
+  const { error: insertError } = await adminSupabase
+    .from('subscriptions')
+    .insert({
+      user_id: targetUserId,
+      plan_id: planId,
+      status: 'settlement',
+      amount: 0, // Manual grants are free
+      interval: 'manual',
+      current_period_start: now.toISOString(),
+      current_period_end: endDate.toISOString(),
+      midtrans_order_id: orderId,
+      payment_type: 'manual_grant'
+    })
+
+  if (insertError) throw new Error(`Failed to grant subscription: ${insertError.message}`)
+
+  // Log Audit
+  await adminSupabase.from('admin_audit_logs').insert({
+    admin_id: admin.id,
+    action: 'MANUAL_SUBSCRIPTION_GRANT',
+    details: {
+      target_user_id: targetUserId,
+      plan_id: planId,
+      duration_days: durationDays,
+      reason: reason
     }
   })
 
