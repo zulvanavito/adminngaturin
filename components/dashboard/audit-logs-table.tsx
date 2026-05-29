@@ -28,7 +28,8 @@ import {
     ChevronRight, 
     RefreshCcw, 
     CheckCircle2,
-    Eye
+    Eye,
+    Filter
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -36,6 +37,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog"
+import { useFilterStore } from '@/lib/store/filter-store'
 
 export interface AuditLog {
   id: string
@@ -46,6 +48,8 @@ export interface AuditLog {
   details: Record<string, unknown>
   created_at: string
 }
+
+import Fuse from 'fuse.js'
 
 interface AuditLogsTableProps {
   data: AuditLog[]
@@ -58,9 +62,30 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
   const [globalFilter, setGlobalFilter] = React.useState('')
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [lastSync, setLastSync] = React.useState<Date>(new Date())
-
-  // Detail Dialog States
   const [selectedLog, setSelectedLog] = React.useState<AuditLog | null>(null)
+
+  const { audit: auditFilters, setFilter } = useFilterStore()
+
+  // Combined filter logic
+  const filteredData = React.useMemo(() => {
+    let result = data
+
+    // 1. Filter by Action from Zustand
+    if (auditFilters.action) {
+      result = result.filter(log => log.action.includes(auditFilters.action))
+    }
+
+    // 2. Fuzzy search with Fuse.js
+    if (!globalFilter) return result
+
+    const fuse = new Fuse(result, {
+      keys: ['action', 'admin_name', 'admin_email'],
+      threshold: 0.3,
+      ignoreLocation: true,
+    })
+
+    return fuse.search(globalFilter).map(result => result.item)
+  }, [data, globalFilter, auditFilters.action])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -148,7 +173,7 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
   ]
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -159,9 +184,7 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
     state: {
       sorting,
       columnFilters,
-      globalFilter,
     },
-    onGlobalFilterChange: setGlobalFilter,
   })
 
   return (
@@ -178,6 +201,24 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
                 className="w-full rounded-wise-pill border border-border bg-white pl-10 pr-4 py-2 text-sm font-semibold outline-none focus:ring-1 focus:ring-wise-green transition-all"
             />
             </div>
+
+            <div className="flex items-center gap-2 bg-near-black/5 rounded-wise-pill px-3 py-1.5 border border-border/50">
+              <Filter size={12} className="text-wise-gray" />
+              <select 
+                value={auditFilters.action}
+                onChange={(e) => setFilter('audit', 'action', e.target.value)}
+                className="bg-transparent text-[10px] font-black uppercase tracking-widest outline-none border-none cursor-pointer"
+              >
+                <option value="">All Actions</option>
+                <option value="CREATE">Create</option>
+                <option value="UPDATE">Update</option>
+                <option value="DELETE">Delete</option>
+                <option value="SUSPEND">Suspend</option>
+                <option value="BILLING">Billing</option>
+                <option value="XP">XP</option>
+              </select>
+            </div>
+
             <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase text-wise-gray tracking-widest leading-tight">Audit Trail</span>
                 <span className="text-[10px] font-bold text-near-black flex items-center gap-1">
@@ -321,4 +362,3 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
     </div>
   )
 }
-

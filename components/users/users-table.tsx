@@ -49,18 +49,44 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+import { useNotificationStore } from '@/lib/store/notification-store'
+import { useFilterStore } from '@/lib/store/filter-store'
+import Fuse from 'fuse.js'
+
 interface UsersTableProps {
   data: CombinedUser[]
 }
 
 export function UsersTable({ data }: UsersTableProps) {
   const queryClient = useQueryClient()
+  const { users: userFilters, setFilter } = useFilterStore()
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = React.useState('')
   const [rowSelection, setRowSelection] = React.useState({})
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [lastSync, setLastSync] = React.useState<Date>(new Date())
+
+  // Sync global store filters to TanStack table column filters
+  const columnFilters = React.useMemo(() => {
+    const filters = []
+    if (userFilters.role) filters.push({ id: 'role', value: userFilters.role })
+    if (userFilters.status) filters.push({ id: 'status', value: userFilters.status })
+    if (userFilters.plan) filters.push({ id: 'plan', value: userFilters.plan })
+    return filters
+  }, [userFilters])
+
+  // Fuzzy search logic with Fuse.js
+  const filteredData = React.useMemo(() => {
+    if (!globalFilter) return data
+    
+    const fuse = new Fuse(data, {
+      keys: ['display_name', 'email', 'role', 'status', 'plan'],
+      threshold: 0.3,
+      ignoreLocation: true,
+    })
+    
+    return fuse.search(globalFilter).map(result => result.item)
+  }, [data, globalFilter])
 
   // Bulk Dialog States
   const [showBulkDeleteModal, setShowBulkDeleteModal] = React.useState(false)
@@ -83,14 +109,15 @@ export function UsersTable({ data }: UsersTableProps) {
         setRowSelection({})
         setShowBulkDeleteModal(false)
         setBulkDeleteReason('')
-        alert('Bulk action successful')
+        useNotificationStore.getState().addToast('success', 'Bulk action successful')
     },
     onError: (error: Error) => {
-        alert(`Bulk Error: ${error.message}`)
+        useNotificationStore.getState().addToast('error', `Bulk Error: ${error.message}`)
     }
   })
 
   const columns: ColumnDef<CombinedUser>[] = [
+    // ... rest of columns
     {
       id: 'select',
       header: ({ table }) => (
@@ -189,22 +216,19 @@ export function UsersTable({ data }: UsersTableProps) {
   ]
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
-      globalFilter,
       rowSelection,
     },
-    onGlobalFilterChange: setGlobalFilter,
   })
 
   const selectedRows = table.getSelectedRowModel().rows
@@ -216,6 +240,8 @@ export function UsersTable({ data }: UsersTableProps) {
         bulkMutation.mutate({ type: 'suspend', payload: { ids, status } })
     }
   }
+
+  const filterSelectStyle = "bg-near-black/5 rounded-wise-pill px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none border-none cursor-pointer hover:bg-near-black/10 transition-colors"
 
   return (
     <div className="space-y-4">
@@ -231,6 +257,41 @@ export function UsersTable({ data }: UsersTableProps) {
                 className="w-full rounded-wise-pill border border-border bg-white pl-10 pr-4 py-2 text-sm font-semibold outline-none focus:ring-1 focus:ring-wise-cyan transition-all"
             />
             </div>
+
+            <div className="flex items-center gap-2">
+                <select 
+                  value={userFilters.role}
+                  onChange={(e) => setFilter('users', 'role', e.target.value)}
+                  className={filterSelectStyle}
+                >
+                    <option value="">Role: All</option>
+                    <option value="admin">Admin</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="user">User</option>
+                </select>
+
+                <select 
+                  value={userFilters.status}
+                  onChange={(e) => setFilter('users', 'status', e.target.value)}
+                  className={filterSelectStyle}
+                >
+                    <option value="">Status: All</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                </select>
+
+                <select 
+                  value={userFilters.plan}
+                  onChange={(e) => setFilter('users', 'plan', e.target.value)}
+                  className={filterSelectStyle}
+                >
+                    <option value="">Plan: All</option>
+                    <option value="free">Free</option>
+                    <option value="plus">Plus</option>
+                    <option value="pro">Pro</option>
+                </select>
+            </div>
+
             <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase text-wise-gray tracking-widest leading-tight">Data Health</span>
                 <span className="text-[10px] font-bold text-near-black flex items-center gap-1">

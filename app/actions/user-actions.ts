@@ -298,3 +298,39 @@ export async function grantManualSubscriptionAction(targetUserId: string, planId
   revalidatePath('/users')
   return { success: true }
 }
+
+export async function revokeSubscriptionAction(targetUserId: string, reason: string) {
+  const adminSupabase = createAdminClient()
+  const publicSupabase = await createClient()
+
+  const { data: { user: admin } } = await publicSupabase.auth.getUser()
+  if (!admin) throw new Error('Unauthorized')
+
+  const now = new Date().toISOString()
+
+  const { error: updateError } = await adminSupabase
+    .from('subscriptions')
+    .update({ 
+        status: 'cancel',
+        current_period_end: now,
+        updated_at: now
+    })
+    .eq('user_id', targetUserId)
+    .eq('status', 'settlement')
+    .gt('current_period_end', now)
+
+  if (updateError) throw new Error(`Failed to revoke subscription: ${updateError.message}`)
+
+  // Log Audit
+  await adminSupabase.from('admin_audit_logs').insert({
+    admin_id: admin.id,
+    action: 'REVOKE_SUBSCRIPTION',
+    details: {
+      target_user_id: targetUserId,
+      reason: reason
+    }
+  })
+
+  revalidatePath('/users')
+  return { success: true }
+}

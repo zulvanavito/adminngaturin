@@ -10,9 +10,14 @@ import {
   PenTool, 
   LogOut,
   ShieldAlert,
-  History
+  History,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useUIStore } from '@/lib/store/ui-store'
 
 const navigation = [
   { name: 'Overview', href: '/', icon: LayoutDashboard },
@@ -26,6 +31,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { isSidebarOpen, toggleSidebar } = useUIStore()
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -34,14 +40,26 @@ export function Sidebar() {
   }
 
   return (
-    <div className="flex h-full w-64 flex-col border-r border-border bg-white">
+    <div className={cn(
+      "flex h-full flex-col border-r border-border bg-white transition-all duration-300 ease-in-out",
+      isSidebarOpen ? "w-64" : "w-20"
+    )}>
       {/* Brand Header */}
-      <div className="flex h-16 shrink-0 items-center px-6 border-b border-border">
-        <Link href="/" className="flex items-center">
-          <h1 className="text-xl font-black text-near-black">
+      <div className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-border">
+        <Link href="/" className={cn("flex items-center transition-opacity duration-300", !isSidebarOpen && "opacity-0 invisible w-0")}>
+          <h1 className="text-xl font-black text-near-black whitespace-nowrap">
             ADMIN<span className="text-wise-cyan">CONSOLE</span>
           </h1>
         </Link>
+        <button 
+          onClick={toggleSidebar}
+          className={cn(
+            "p-1 rounded-wise-sm hover:bg-near-black/5 text-muted-foreground hover:text-near-black transition-all",
+            !isSidebarOpen && "mx-auto"
+          )}
+        >
+          {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+        </button>
       </div>
       
       {/* Navigation Links */}
@@ -53,21 +71,24 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                title={!isSidebarOpen ? item.name : undefined}
                 className={cn(
                   isActive 
                     ? 'bg-wise-cyan/10 text-wise-cyan-dark' 
                     : 'text-muted-foreground hover:bg-near-black/5 hover:text-near-black',
-                  'group flex items-center rounded-wise-sm px-3 py-2 text-sm font-bold transition-transform duration-200 hover:scale(1.02) active:scale(0.98)'
+                  'group flex items-center rounded-wise-sm px-3 py-2 text-sm font-bold transition-all duration-200 hover:scale(1.02) active:scale(0.98)',
+                  !isSidebarOpen && "justify-center px-0"
                 )}
               >
                 <item.icon
                   className={cn(
                     isActive ? 'text-wise-cyan-dark' : 'text-muted-foreground group-hover:text-near-black',
-                    'mr-3 h-5 w-5 shrink-0'
+                    isSidebarOpen ? 'mr-3 h-5 w-5' : 'h-6 w-6',
+                    'shrink-0'
                   )}
                   aria-hidden="true"
                 />
-                {item.name}
+                {isSidebarOpen && <span className="truncate">{item.name}</span>}
               </Link>
             )
           })}
@@ -75,16 +96,39 @@ export function Sidebar() {
 
         {/* Footer: Admin Status & Sign Out */}
         <div className="mt-auto border-t border-border pt-4 pb-6 space-y-1">
-          <div className="px-3 py-2 flex items-center text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">
-            <ShieldAlert className="mr-2 h-3 w-3" />
-            Admin Privileges
+          <button
+            onClick={() => useUIStore.getState().setDensity(useUIStore.getState().density === 'compact' ? 'comfortable' : 'compact')}
+            title={!isSidebarOpen ? `Density: ${useUIStore.getState().density}` : undefined}
+            className={cn(
+              "w-full group flex items-center rounded-wise-sm px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-near-black/5 hover:text-near-black transition-all duration-200",
+              !isSidebarOpen && "justify-center px-0"
+            )}
+          >
+            {useUIStore((state) => state.density) === 'compact' ? (
+              <Minimize2 className={cn("shrink-0", isSidebarOpen ? "h-3 w-3 mr-2" : "h-5 w-5")} />
+            ) : (
+              <Maximize2 className={cn("shrink-0", isSidebarOpen ? "h-3 w-3 mr-2" : "h-5 w-5")} />
+            )}
+            {isSidebarOpen && `Density: ${useUIStore.getState().density}`}
+          </button>
+
+          <div className={cn(
+            "px-3 py-2 flex items-center text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2",
+            !isSidebarOpen && "justify-center px-0"
+          )}>
+            <ShieldAlert className={cn("h-3 w-3", isSidebarOpen && "mr-2")} />
+            {isSidebarOpen && "Admin Privileges"}
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full group flex items-center rounded-wise-sm px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 transition-all duration-200 hover:scale(1.02) active:scale(0.98)"
+            title={!isSidebarOpen ? "Sign Out" : undefined}
+            className={cn(
+              "w-full group flex items-center rounded-wise-sm px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 transition-all duration-200 hover:scale(1.02) active:scale(0.98)",
+              !isSidebarOpen && "justify-center px-0"
+            )}
           >
-            <LogOut className="mr-3 h-5 w-5 shrink-0 text-red-500 group-hover:text-red-700" />
-            Sign Out
+            <LogOut className={cn("text-red-500 group-hover:text-red-700 shrink-0", isSidebarOpen ? "mr-3 h-5 w-5" : "h-6 w-6")} />
+            {isSidebarOpen && "Sign Out"}
           </button>
         </div>
       </div>

@@ -11,15 +11,15 @@ import {
 } from 'recharts'
 
 interface GrowthChartProps {
-  data: { name: string; users: number }[]
+  data: { name: string; total: number }[]
 }
 
 export function GrowthChart({ data }: GrowthChartProps) {
   return (
-    <div className="wise-card h-[400px] w-full p-8 flex flex-col">
-      <div className="mb-6">
-        <h3 className="text-[22px] font-black text-near-black uppercase tracking-tight">User Acquisition</h3>
-        <p className="text-[14px] font-semibold text-wise-gray uppercase tracking-widest">Growth Trend (Last 6 Months)</p>
+    <div className="h-[400px] w-full flex flex-col">
+      <div className="mb-6 px-4">
+        <h3 className="text-[22px] font-black text-near-black uppercase tracking-tight">Revenue Growth</h3>
+        <p className="text-[14px] font-semibold text-wise-gray uppercase tracking-widest">Growth Trend (Last 7 Days)</p>
       </div>
       
       <div className="flex-1 w-full min-h-0">
@@ -29,7 +29,7 @@ export function GrowthChart({ data }: GrowthChartProps) {
             margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
           >
             <defs>
-              <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#70e6e8" stopOpacity={0.3}/>
                 <stop offset="95%" stopColor="#70e6e8" stopOpacity={0}/>
               </linearGradient>
@@ -57,15 +57,16 @@ export function GrowthChart({ data }: GrowthChartProps) {
                     fontWeight: '900'
                 }}
                 itemStyle={{ color: '#0e0f0c' }}
-                cursor={{ stroke: '#70e6e8', strokeWidth: 2 }}
+                formatter={(value: any) => [new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value)), 'Revenue']}
+                cursor={{ stroke: '#003333', strokeWidth: 2 }}
             />
             <Area 
                 type="monotone" 
-                dataKey="users" 
-                stroke="#70e6e8" 
+                dataKey="total" 
+                stroke="#003333" 
                 strokeWidth={3}
                 fillOpacity={1} 
-                fill="url(#colorUsers)" 
+                fill="url(#colorTotal)" 
                 animationDuration={1500}
             />
           </AreaChart>

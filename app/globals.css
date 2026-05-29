@@ -30,6 +30,9 @@
   --radius-wise-xl: 40px;
   --radius-wise-pill: 9999px;
 
+  /* Shadow Presets */
+  --shadow-ring: rgba(14, 15, 12, 0.12) 0px 0px 0px 1px;
+
   /* Typography */
   --font-display: var(--font-inter), sans-serif;
   --font-body: var(--font-inter), sans-serif;
