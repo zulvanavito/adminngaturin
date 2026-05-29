@@ -6,14 +6,16 @@ import {
   Ban, 
   Trash2, 
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  Crown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CombinedUser } from '@/types/user'
 import { 
   adjustXpAction, 
   suspendUserAction, 
-  deleteUserAction 
+  deleteUserAction,
+  grantManualSubscriptionAction
 } from '@/app/actions/user-actions'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -37,6 +39,7 @@ export function UserActions({ user }: UserActionsProps) {
   const [showXpModal, setShowXpModal] = useState(false)
   const [showSuspendModal, setShowSuspendModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showGrantModal, setShowGrantModal] = useState(false)
 
   // Form States
   const [xpAmount, setXpAmount] = useState('0')
@@ -44,22 +47,29 @@ export function UserActions({ user }: UserActionsProps) {
   const [deleteReason, setDeleteModalReason] = useState('')
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
 
+  const [grantPlan, setGrantPlan] = useState<'plus' | 'pro'>('plus')
+  const [grantDuration, setGrantDuration] = useState('30')
+  const [grantReason, setGrantReason] = useState('')
+
   const mutation = useMutation({
-    mutationFn: async ({ type, payload }: { type: string, payload: { amount?: number; reason?: string; status?: string } }) => {
+    mutationFn: async ({ type, payload }: { type: string, payload: { amount?: number; reason?: string; status?: string; planId?: 'plus' | 'pro'; duration?: number } }) => {
       if (type === 'xp') return adjustXpAction(user.user_id, payload.amount!, payload.reason!)
       if (type === 'suspend') return suspendUserAction(user.user_id, payload.status as 'active' | 'suspended')
       if (type === 'delete') return deleteUserAction(user.user_id, payload.reason!)
+      if (type === 'grant') return grantManualSubscriptionAction(user.user_id, payload.planId!, payload.duration!, payload.reason!)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setShowXpModal(false)
       setShowSuspendModal(false)
       setShowDeleteModal(false)
+      setShowGrantModal(false)
       // Reset forms
       setXpAmount('0')
       setXpReason('')
       setDeleteModalReason('')
       setIsConfirmingDelete(false)
+      setGrantReason('')
     },
     onError: (error: Error) => {
       alert(`Error: ${error.message}`)
@@ -69,6 +79,18 @@ export function UserActions({ user }: UserActionsProps) {
   const handleXpSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     mutation.mutate({ type: 'xp', payload: { amount: parseInt(xpAmount), reason: xpReason } })
+  }
+
+  const handleGrantSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    mutation.mutate({ 
+      type: 'grant', 
+      payload: { 
+        planId: grantPlan, 
+        duration: parseInt(grantDuration), 
+        reason: grantReason 
+      } 
+    })
   }
 
   const handleSuspendToggle = () => {
@@ -86,6 +108,16 @@ export function UserActions({ user }: UserActionsProps) {
   return (
     <div className="flex items-center gap-2">
       {/* Trigger Buttons */}
+      <Button 
+        variant="outline" 
+        size="icon" 
+        onClick={() => setShowGrantModal(true)}
+        title="Grant Premium Access"
+        className="h-8 w-8 hover:text-purple-600 hover:border-purple-600 border-border/40"
+      >
+        <Crown className="h-4 w-4" />
+      </Button>
+
       <Button 
         variant="outline" 
         size="icon" 
@@ -257,6 +289,66 @@ export function UserActions({ user }: UserActionsProps) {
                     className="bg-red-600 hover:bg-red-700 h-11 px-6 text-base"
                 >
                     {mutation.isPending ? 'Executing Wipe...' : 'Delete User Permanently'}
+                </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 4. GRANT PREMIUM MODAL */}
+      <Dialog open={showGrantModal} onOpenChange={setShowGrantModal}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+                <div className="rounded-full bg-purple-100 p-2">
+                    <Crown className="h-6 w-6 text-purple-700" />
+                </div>
+                <DialogTitle>Grant Premium Access</DialogTitle>
+            </div>
+            <DialogDescription>
+                Manually grant a subscription to <span className="font-black text-near-black">{user.display_name}</span>. This bypasses the payment gateway.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleGrantSubmit} className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Select Plan</label>
+                    <select 
+                        value={grantPlan}
+                        onChange={(e) => setGrantPlan(e.target.value as 'plus' | 'pro')}
+                        className="w-full rounded-wise-sm border border-border bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-1 focus:ring-purple-600"
+                    >
+                        <option value="plus">Ngaturin Plus</option>
+                        <option value="pro">Ngaturin Pro</option>
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Duration (Days)</label>
+                    <input 
+                        type="number" 
+                        value={grantDuration}
+                        onChange={(e) => setGrantDuration(e.target.value)}
+                        min="1"
+                        className="w-full rounded-wise-sm border border-border bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-1 focus:ring-purple-600"
+                        placeholder="e.g. 30"
+                    />
+                </div>
+            </div>
+            <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Reason for Grant (Audit Log)</label>
+                <textarea 
+                    value={grantReason}
+                    onChange={(e) => setGrantReason(e.target.value)}
+                    required
+                    rows={2}
+                    className="w-full rounded-wise-sm border border-border bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-1 focus:ring-purple-600"
+                    placeholder="e.g. Customer support compensation, Giveaway winner"
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="secondary" type="button" onClick={() => setShowGrantModal(false)}>Cancel</Button>
+                <Button type="submit" disabled={mutation.isPending} className="bg-purple-600 hover:bg-purple-700 text-white">
+                    {mutation.isPending ? 'Granting...' : 'Grant Subscription'}
                 </Button>
             </DialogFooter>
           </form>
