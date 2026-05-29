@@ -30,6 +30,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.2.1",
+    "fuse.js": "^7.3.0",
     "lucide-react": "^1.16.0",
     "midtrans-client": "^1.4.3",
     "next": "16.2.6",
@@ -39,7 +40,8 @@
     "react-hook-form": "^7.76.0",
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
