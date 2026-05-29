@@ -255,3 +255,46 @@ export async function bulkDeleteUsersAction(targetUserIds: string[], reason: str
   revalidatePath('/users')
   return { success: true }
 }
+
+export async function grantManualSubscriptionAction(targetUserId: string, planId: 'plus' | 'pro', durationDays: number, reason: string) {
+  const adminSupabase = createAdminClient()
+  const publicSupabase = await createClient()
+
+  const { data: { user: admin } } = await publicSupabase.auth.getUser()
+  if (!admin) throw new Error('Unauthorized')
+
+  const now = new Date()
+  const endDate = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000))
+  const orderId = `MANUAL-${targetUserId.substring(0,8)}-${now.getTime()}`
+
+  const { error: insertError } = await adminSupabase
+    .from('subscriptions')
+    .insert({
+      user_id: targetUserId,
+      plan_id: planId,
+      status: 'settlement',
+      amount: 0, // Manual grants are free
+      interval: 'manual',
+      current_period_start: now.toISOString(),
+      current_period_end: endDate.toISOString(),
+      midtrans_order_id: orderId,
+      payment_type: 'manual_grant'
+    })
+
+  if (insertError) throw new Error(`Failed to grant subscription: ${insertError.message}`)
+
+  // Log Audit
+  await adminSupabase.from('admin_audit_logs').insert({
+    admin_id: admin.id,
+    action: 'MANUAL_SUBSCRIPTION_GRANT',
+    details: {
+      target_user_id: targetUserId,
+      plan_id: planId,
+      duration_days: durationDays,
+      reason: reason
+    }
+  })
+
+  revalidatePath('/users')
+  return { success: true }
+}
