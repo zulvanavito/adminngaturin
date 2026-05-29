@@ -294,3 +294,25 @@ Add the Dialog component for the manual grant form.
 git add components/users/user-actions.tsx
 git commit -m "feat: add manual subscription grant UI to user directory"
 ```
+
+---
+
+### Task 5: Revoke Subscription Feature
+
+**Files:**
+- Modify: `app/actions/user-actions.ts`
+- Modify: `components/users/user-actions.tsx`
+
+- [ ] **Step 1: Implement revokeSubscriptionAction**
+Add the server action to cancel active subscriptions and log the event.
+
+- [ ] **Step 2: Update UI to show Revoke option**
+Modify the "Grant Premium Access" modal to show a "Revoke Access" section if the user is currently Plus or Pro.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add app/actions/user-actions.ts components/users/user-actions.tsx
+git commit -m "feat: implement revoke premium access feature"
+```
+
