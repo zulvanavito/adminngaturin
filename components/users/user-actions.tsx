@@ -70,6 +70,8 @@ export function UserActions({ user }: UserActionsProps) {
       setDeleteModalReason('')
       setIsConfirmingDelete(false)
       setGrantReason('')
+      setGrantPlan('plus')
+      setGrantDuration('30')
     },
     onError: (error: Error) => {
       alert(`Error: ${error.message}`)
@@ -167,8 +169,9 @@ export function UserActions({ user }: UserActionsProps) {
           </DialogHeader>
           <form onSubmit={handleXpSubmit} className="space-y-4 mt-4">
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-wise-gray">XP Amount</label>
+                <label htmlFor="xp-amount" className="text-[10px] font-black uppercase tracking-widest text-wise-gray">XP Amount</label>
                 <input 
+                    id="xp-amount"
                     type="number" 
                     value={xpAmount}
                     onChange={(e) => setXpAmount(e.target.value)}
@@ -177,8 +180,9 @@ export function UserActions({ user }: UserActionsProps) {
                 />
             </div>
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Reason for adjustment</label>
+                <label htmlFor="xp-reason" className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Reason for adjustment</label>
                 <textarea 
+                    id="xp-reason"
                     value={xpReason}
                     onChange={(e) => setXpReason(e.target.value)}
                     required
@@ -256,8 +260,9 @@ export function UserActions({ user }: UserActionsProps) {
             </div>
 
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-red-900/50">Deletion Reason (Required)</label>
+                <label htmlFor="delete-reason" className="text-[10px] font-black uppercase tracking-widest text-red-900/50">Deletion Reason (Required)</label>
                 <textarea 
+                    id="delete-reason"
                     value={deleteReason}
                     onChange={(e) => setDeleteModalReason(e.target.value)}
                     required
@@ -312,8 +317,9 @@ export function UserActions({ user }: UserActionsProps) {
           <form onSubmit={handleGrantSubmit} className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Select Plan</label>
+                    <label htmlFor="grant-plan" className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Select Plan</label>
                     <select 
+                        id="grant-plan"
                         value={grantPlan}
                         onChange={(e) => setGrantPlan(e.target.value as 'plus' | 'pro')}
                         className="w-full rounded-wise-sm border border-border bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-1 focus:ring-purple-600"
@@ -323,8 +329,9 @@ export function UserActions({ user }: UserActionsProps) {
                     </select>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Duration (Days)</label>
+                    <label htmlFor="grant-duration" className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Duration (Days)</label>
                     <input 
+                        id="grant-duration"
                         type="number" 
                         value={grantDuration}
                         onChange={(e) => setGrantDuration(e.target.value)}
@@ -335,8 +342,9 @@ export function UserActions({ user }: UserActionsProps) {
                 </div>
             </div>
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Reason for Grant (Audit Log)</label>
+                <label htmlFor="grant-reason" className="text-[10px] font-black uppercase tracking-widest text-wise-gray">Reason for Grant (Audit Log)</label>
                 <textarea 
+                    id="grant-reason"
                     value={grantReason}
                     onChange={(e) => setGrantReason(e.target.value)}
                     required
