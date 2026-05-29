@@ -51,10 +51,25 @@ export async function upsertBlogPostAction(data: CreateBlogPost & { id?: string 
   const { data: { user } } = await publicSupabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
+  // Role enforcement: Check if user has admin or moderator role
+  const { data: profile, error: profileError } = await adminSupabase
+    .from('user_profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (profileError || !profile) {
+    throw new Error('Could not verify user role')
+  }
+
+  if (profile.role !== 'admin' && profile.role !== 'moderator') {
+    throw new Error('Insufficient permissions: Only admins and moderators can manage blog posts')
+  }
+
   const now = new Date().toISOString()
   
   // Prepare data for database
-  const postData: any = {
+  const postData: Partial<BlogPost> = {
     ...data,
     author_id: user.id,
     updated_at: now,
