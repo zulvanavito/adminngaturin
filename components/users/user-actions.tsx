@@ -19,6 +19,7 @@ import {
   revokeSubscriptionAction
 } from '@/app/actions/user-actions'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNotificationStore } from '@/lib/store/notification-store'
 import {
   Dialog,
   DialogContent,
@@ -81,7 +82,7 @@ export function UserActions({ user }: UserActionsProps) {
       setRevokeReason('')
     },
     onError: (error: Error) => {
-      alert(`Error: ${error.message}`)
+      useNotificationStore.getState().addToast('error', `Error: ${error.message}`)
     }
   })
 

@@ -12,7 +12,9 @@ import {
   ShieldAlert,
   History,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Maximize2,
+  Minimize2
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useUIStore } from '@/lib/store/ui-store'
@@ -94,6 +96,22 @@ export function Sidebar() {
 
         {/* Footer: Admin Status & Sign Out */}
         <div className="mt-auto border-t border-border pt-4 pb-6 space-y-1">
+          <button
+            onClick={() => useUIStore.getState().setDensity(useUIStore.getState().density === 'compact' ? 'comfortable' : 'compact')}
+            title={!isSidebarOpen ? `Density: ${useUIStore.getState().density}` : undefined}
+            className={cn(
+              "w-full group flex items-center rounded-wise-sm px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-near-black/5 hover:text-near-black transition-all duration-200",
+              !isSidebarOpen && "justify-center px-0"
+            )}
+          >
+            {useUIStore((state) => state.density) === 'compact' ? (
+              <Minimize2 className={cn("shrink-0", isSidebarOpen ? "h-3 w-3 mr-2" : "h-5 w-5")} />
+            ) : (
+              <Maximize2 className={cn("shrink-0", isSidebarOpen ? "h-3 w-3 mr-2" : "h-5 w-5")} />
+            )}
+            {isSidebarOpen && `Density: ${useUIStore.getState().density}`}
+          </button>
+
           <div className={cn(
             "px-3 py-2 flex items-center text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2",
             !isSidebarOpen && "justify-center px-0"

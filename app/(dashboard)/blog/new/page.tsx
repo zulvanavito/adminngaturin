@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { upsertBlogPostAction } from '@/app/actions/blog-actions'
 import { BlogStatus } from '@/types/blog'
+import { useNotificationStore } from '@/lib/store/notification-store'
 
 export default function NewBlogPostPage() {
   const router = useRouter()
@@ -78,7 +79,7 @@ export default function NewBlogPostPage() {
         setCoverImageUrl(cdnUrl)
       } catch (error) {
         console.error('Upload error:', error)
-        alert('Failed to upload cover image')
+        useNotificationStore.getState().addToast('error', 'Failed to upload cover image')
       } finally {
         setIsUploadingCover(false)
       }
@@ -87,7 +88,7 @@ export default function NewBlogPostPage() {
 
   const handleSave = async () => {
     if (!title || !slug || !content) {
-      alert('Please fill in required fields: Title, Slug, and Content')
+      useNotificationStore.getState().addToast('info', 'Please fill in required fields: Title, Slug, and Content')
       return
     }
 
@@ -108,7 +109,7 @@ export default function NewBlogPostPage() {
       router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
-      alert(`Error saving post: ${message}`)
+      useNotificationStore.getState().addToast('error', `Error saving post: ${message}`)
     } finally {
       setIsSubmitting(false)
     }

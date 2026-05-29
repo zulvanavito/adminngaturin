@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { upsertBlogPostAction, getBlogPostByIdAction } from '@/app/actions/blog-actions'
 import { BlogStatus } from '@/types/blog'
+import { useNotificationStore } from '@/lib/store/notification-store'
 
 export default function EditBlogPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -54,7 +55,7 @@ export default function EditBlogPostPage({ params }: { params: Promise<{ id: str
         setContent(post.content)
       } catch (error) {
         console.error('Error loading post:', error)
-        alert('Failed to load blog post')
+        useNotificationStore.getState().addToast('error', 'Failed to load blog post')
         router.push('/blog')
       } finally {
         setIsLoading(false)
@@ -90,7 +91,7 @@ export default function EditBlogPostPage({ params }: { params: Promise<{ id: str
         setCoverImageUrl(cdnUrl)
       } catch (error) {
         console.error('Upload error:', error)
-        alert('Failed to upload cover image')
+        useNotificationStore.getState().addToast('error', 'Failed to upload cover image')
       } finally {
         setIsUploadingCover(false)
       }
@@ -99,7 +100,7 @@ export default function EditBlogPostPage({ params }: { params: Promise<{ id: str
 
   const handleSave = async () => {
     if (!title || !slug || !content) {
-      alert('Please fill in required fields: Title, Slug, and Content')
+      useNotificationStore.getState().addToast('info', 'Please fill in required fields: Title, Slug, and Content')
       return
     }
 
@@ -121,7 +122,7 @@ export default function EditBlogPostPage({ params }: { params: Promise<{ id: str
       router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
-      alert(`Error saving post: ${message}`)
+      useNotificationStore.getState().addToast('error', `Error saving post: ${message}`)
     } finally {
       setIsSubmitting(false)
     }

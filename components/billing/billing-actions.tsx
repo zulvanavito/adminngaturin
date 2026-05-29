@@ -14,6 +14,7 @@ import {
   refundTransactionAction 
 } from '@/app/actions/billing-actions'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNotificationStore } from '@/lib/store/notification-store'
 import {
   Dialog,
   DialogContent,
@@ -54,13 +55,13 @@ export function BillingActions({ log }: BillingActionsProps) {
       
       const syncRes = res as { status?: string }
       if (syncRes?.status) {
-          alert(`Sync Complete: Transaction is now ${syncRes.status.toUpperCase()}`)
+          useNotificationStore.getState().addToast('success', `Sync Complete: Transaction is now ${syncRes.status.toUpperCase()}`)
       } else {
-          alert('Action successful')
+          useNotificationStore.getState().addToast('success', 'Action successful')
       }
     },
     onError: (error: Error) => {
-      alert(`Error: ${error.message}`)
+      useNotificationStore.getState().addToast('error', `Error: ${error.message}`)
     }
   })
 
