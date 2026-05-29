@@ -174,3 +174,48 @@ export async function refundTransactionAction(orderId: string, reason: string) {
   revalidatePath('/billing')
   return { success: true }
 }
+
+export async function reconcileBatchAction(orderIds: string[]): Promise<{ results: { orderId: string, status: string, success: boolean }[] }> {
+  const adminSupabase = await createAdminClient()
+  const publicSupabase = await createClient()
+
+  const { data: { user: admin } } = await publicSupabase.auth.getUser()
+  if (!admin) throw new Error('Unauthorized')
+
+  const results = await Promise.all(orderIds.map(async (orderId) => {
+    try {
+      const midtransStatus: MidtransStatusResponse = await coreApi.transaction.status(orderId)
+      const newStatus = midtransStatus.transaction_status
+      
+      const { error: updateError } = await adminSupabase
+        .from('subscriptions')
+        .update({ 
+            status: newStatus,
+            payment_type: midtransStatus.payment_type,
+            updated_at: new Date().toISOString()
+        })
+        .eq('midtrans_order_id', orderId)
+
+      if (updateError) throw new Error(updateError.message)
+
+      return { orderId, status: newStatus, success: true }
+    } catch (err) {
+      console.error(`Error reconciling order ${orderId}:`, err)
+      return { orderId, status: 'error', success: false }
+    }
+  }))
+
+  // Log single batch audit
+  await adminSupabase.from('admin_audit_logs').insert({
+    admin_id: admin.id,
+    action: 'BATCH_RECONCILE',
+    details: { 
+        count: orderIds.length,
+        processed: results.length,
+        success_count: results.filter(r => r.success).length
+    }
+  })
+
+  revalidatePath('/billing')
+  return { results }
+}
