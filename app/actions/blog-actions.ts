@@ -2,53 +2,106 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { CreatePostInput } from '@/types/blog'
+import { BlogPost, CreateBlogPost } from '@/types/blog'
 import { revalidatePath } from 'next/cache'
 
-export async function getPostsAction() {
+/**
+ * Fetches all blog posts, ordered by creation date descending.
+ */
+export async function getBlogPostsAction(): Promise<BlogPost[]> {
   const adminSupabase = createAdminClient()
   const { data, error } = await adminSupabase
     .from('blog_posts')
     .select('*')
     .order('created_at', { ascending: false })
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error('Error fetching blog posts:', error)
+    throw new Error(error.message)
+  }
+  return data || []
+}
+
+/**
+ * Fetches a single blog post by its slug.
+ */
+export async function getBlogPostAction(slug: string): Promise<BlogPost> {
+  const adminSupabase = createAdminClient()
+  const { data, error } = await adminSupabase
+    .from('blog_posts')
+    .select('*')
+    .eq('slug', slug)
+    .single()
+
+  if (error) {
+    console.error(`Error fetching blog post with slug ${slug}:`, error)
+    throw new Error(error.message)
+  }
   return data
 }
 
-export async function savePostAction(input: CreatePostInput & { id?: string }) {
+/**
+ * Creates or updates a blog post.
+ */
+export async function upsertBlogPostAction(data: CreateBlogPost & { id?: string }) {
   const adminSupabase = createAdminClient()
   const publicSupabase = await createClient()
 
+  // Get current admin user
   const { data: { user } } = await publicSupabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  const slug = input.title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
+  const now = new Date().toISOString()
   
-  const postData = {
-    ...input,
-    slug,
+  // Prepare data for database
+  const postData: any = {
+    ...data,
     author_id: user.id,
-    updated_at: new Date().toISOString(),
-    published_at: input.status === 'published' ? new Date().toISOString() : null
+    updated_at: now,
   }
 
-  let error
-  if (input.id) {
-    const { error: updateError } = await adminSupabase
+  // Handle published_at logic
+  if (data.status === 'published' && !data.published_at) {
+    postData.published_at = now
+  } else if (data.status !== 'published') {
+    postData.published_at = null
+  }
+
+  let result
+  if (data.id) {
+    // Update existing post
+    result = await adminSupabase
       .from('blog_posts')
       .update(postData)
-      .eq('id', input.id)
-    error = updateError
+      .eq('id', data.id)
+      .select()
+      .single()
   } else {
-    const { error: insertError } = await adminSupabase
+    // Create new post
+    result = await adminSupabase
       .from('blog_posts')
       .insert(postData)
-    error = insertError
+      .select()
+      .single()
   }
 
-  if (error) throw new Error(error.message)
+  if (result.error) {
+    console.error('Error upserting blog post:', result.error)
+    throw new Error(result.error.message)
+  }
+
+  // Record action in audit logs
+  await adminSupabase.from('admin_audit_logs').insert({
+    admin_id: user.id,
+    action: data.id ? 'UPDATE_BLOG_POST' : 'CREATE_BLOG_POST',
+    details: {
+      post_id: result.data.id,
+      slug: result.data.slug,
+      title: result.data.title,
+      status: result.data.status
+    }
+  })
 
   revalidatePath('/blog')
-  return { success: true }
+  return { success: true, data: result.data }
 }

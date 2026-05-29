@@ -1,29 +1,20 @@
-export type PostStatus = 'draft' | 'published' | 'archived';
+export type BlogStatus = 'draft' | 'published' | 'archived';
 
 export interface BlogPost {
   id: string;
-  title: string;
   slug: string;
+  title: string;
   content: string;
   excerpt: string;
-  cover_image_url: string | null;
+  cover_image_url?: string;
   category: string;
   tags: string[];
-  status: PostStatus;
+  status: BlogStatus;
   is_featured: boolean;
   author_id: string;
-  published_at: string | null;
+  published_at?: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface CreatePostInput {
-  title: string;
-  content: string;
-  excerpt: string;
-  category: string;
-  cover_image_url?: string;
-  tags?: string[];
-  status?: PostStatus;
-  is_featured?: boolean;
-}
+export type CreateBlogPost = Omit<BlogPost, 'id' | 'created_at' | 'updated_at' | 'author_id'>;
