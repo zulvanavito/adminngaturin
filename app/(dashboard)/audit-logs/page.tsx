@@ -14,7 +14,7 @@ export default async function AuditLogsPage() {
     <div className="flex flex-col gap-8 max-w-[1400px] mx-auto">
       <div className="flex flex-col gap-1">
         <h1 className="text-[48px] font-black uppercase italic tracking-tighter leading-none text-near-black">
-          System <span className="text-wise-green">Audit</span> Logs
+          System <span className="text-wise-cyan">Audit</span> Logs
         </h1>
         <p className="text-wise-gray font-semibold text-sm">
           A comprehensive record of all administrative actions performed across the platform.

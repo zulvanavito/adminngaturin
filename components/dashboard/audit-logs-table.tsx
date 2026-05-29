@@ -281,7 +281,7 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
             <div className="flex flex-col">
               <div className="bg-near-black p-8 text-white">
                 <div className="flex items-center justify-between mb-6">
-                    <span className="bg-wise-green text-wise-green-dark px-3 py-1 rounded-wise-pill text-[10px] font-black uppercase tracking-widest">
+                    <span className="bg-wise-cyan text-wise-cyan-dark px-3 py-1 rounded-wise-pill text-[10px] font-black uppercase tracking-widest">
                         Audit Detail
                     </span>
                     <span className="text-wise-gray text-[10px] font-bold">
@@ -321,3 +321,4 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
     </div>
   )
 }
+

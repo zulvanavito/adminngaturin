@@ -169,7 +169,7 @@ export function BillingTable({ data }: BillingTableProps) {
               </div>
               <div className="w-full h-2.5 bg-wise-gray/10 rounded-full overflow-hidden border border-near-black/5">
                 <div 
-                  className="h-full bg-wise-green transition-all duration-500 ease-out" 
+                  className="h-full bg-wise-cyan transition-all duration-500 ease-out" 
                   style={{ width: `${reconcileProgress}%` }}
                 />
               </div>

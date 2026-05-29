@@ -5,11 +5,13 @@
   --color-background: #ffffff;
   --color-foreground: #0e0f0c;
   
-  --color-primary: #9fe870;
-  --color-primary-foreground: #163300;
+  --color-primary: #70e6e8;
+  --color-primary-foreground: #003333;
   
   --color-wise-green: #9fe870;
   --color-wise-green-dark: #163300;
+  --color-wise-cyan: #70e6e8;
+  --color-wise-cyan-dark: #003333;
   --color-light-mint: #e2f6d5;
   --color-pastel-green: #cdffad;
   --color-near-black: #0e0f0c;

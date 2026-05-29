@@ -39,7 +39,7 @@ export function Sidebar() {
       <div className="flex h-16 shrink-0 items-center px-6 border-b border-border">
         <Link href="/" className="flex items-center">
           <h1 className="text-xl font-black text-near-black">
-            ADMIN<span className="text-wise-green">CONSOLE</span>
+            ADMIN<span className="text-wise-cyan">CONSOLE</span>
           </h1>
         </Link>
       </div>
@@ -55,14 +55,14 @@ export function Sidebar() {
                 href={item.href}
                 className={cn(
                   isActive 
-                    ? 'bg-wise-green/10 text-wise-green-dark' 
+                    ? 'bg-wise-cyan/10 text-wise-cyan-dark' 
                     : 'text-muted-foreground hover:bg-near-black/5 hover:text-near-black',
                   'group flex items-center rounded-wise-sm px-3 py-2 text-sm font-bold transition-transform duration-200 hover:scale(1.02) active:scale(0.98)'
                 )}
               >
                 <item.icon
                   className={cn(
-                    isActive ? 'text-wise-green-dark' : 'text-muted-foreground group-hover:text-near-black',
+                    isActive ? 'text-wise-cyan-dark' : 'text-muted-foreground group-hover:text-near-black',
                     'mr-3 h-5 w-5 shrink-0'
                   )}
                   aria-hidden="true"
