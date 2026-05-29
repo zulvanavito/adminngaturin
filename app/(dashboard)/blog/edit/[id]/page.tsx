@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { TiptapEditor } from '@/components/blog/tiptap-editor'
 import { Button } from '@/components/ui/button'
@@ -18,11 +18,13 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { upsertBlogPostAction } from '@/app/actions/blog-actions'
+import { upsertBlogPostAction, getBlogPostByIdAction } from '@/app/actions/blog-actions'
 import { BlogStatus } from '@/types/blog'
 
-export default function NewBlogPostPage() {
+export default function EditBlogPostPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploadingCover, setIsUploadingCover] = useState(false)
   
@@ -37,19 +39,29 @@ export default function NewBlogPostPage() {
   const [status, setStatus] = useState<BlogStatus>('draft')
   const [content, setContent] = useState('')
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newTitle = e.target.value
-    setTitle(newTitle)
-    
-    // Auto-generate slug from title
-    if (newTitle) {
-      const generatedSlug = newTitle
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-      setSlug(generatedSlug)
+  useEffect(() => {
+    async function loadPost() {
+      try {
+        const post = await getBlogPostByIdAction(id)
+        setTitle(post.title)
+        setSlug(post.slug)
+        setCategory(post.category)
+        setTags(post.tags.join(', '))
+        setExcerpt(post.excerpt)
+        setCoverImageUrl(post.cover_image_url || '')
+        setIsFeatured(post.is_featured)
+        setStatus(post.status)
+        setContent(post.content)
+      } catch (error) {
+        console.error('Error loading post:', error)
+        alert('Failed to load blog post')
+        router.push('/blog')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }
+    loadPost()
+  }, [id, router])
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
@@ -94,6 +106,7 @@ export default function NewBlogPostPage() {
     setIsSubmitting(true)
     try {
       await upsertBlogPostAction({
+        id,
         title,
         slug,
         category,
@@ -112,6 +125,14 @@ export default function NewBlogPostPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="h-12 w-12 border-4 border-wise-cyan border-t-transparent animate-spin rounded-full" />
+      </div>
+    )
   }
 
   return (
@@ -148,7 +169,7 @@ export default function NewBlogPostPage() {
             {isSubmitting ? (
               <div className="h-4 w-4 border-2 border-wise-green-dark border-t-transparent animate-spin rounded-full" />
             ) : (
-              <><Save size={14} className="mr-2" /> {status === 'published' ? 'Publish Story' : 'Save Draft'}</>
+              <><Save size={14} className="mr-2" /> Update Story</>
             )}
           </Button>
         </div>
@@ -166,7 +187,7 @@ export default function NewBlogPostPage() {
             <textarea
               placeholder="The Title of Your Masterpiece"
               value={title}
-              onChange={handleTitleChange}
+              onChange={(e) => setTitle(e.target.value)}
               rows={1}
               className="w-full text-5xl font-black text-near-black tracking-tight leading-[0.85] bg-transparent border-none outline-none resize-none placeholder:text-near-black/10 font-wise"
             />

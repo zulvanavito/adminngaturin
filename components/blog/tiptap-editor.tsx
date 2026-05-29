@@ -19,7 +19,6 @@ import {
   AlignCenter, 
   AlignRight, 
   Image as ImageIcon,
-  Link as LinkIcon,
   Quote,
   Undo,
   Redo
@@ -32,6 +31,29 @@ interface TiptapEditorProps {
   onChange: (content: string) => void
   placeholder?: string
 }
+
+const MenuButton = ({ 
+  onClick, 
+  isActive = false, 
+  children 
+}: { 
+  onClick: () => void, 
+  isActive?: boolean, 
+  children: React.ReactNode 
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "p-2 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90",
+      isActive 
+        ? "bg-wise-green text-wise-green-dark shadow-sm" 
+        : "text-muted-foreground hover:bg-near-black/5 hover:text-near-black"
+    )}
+  >
+    {children}
+  </button>
+)
 
 export function TiptapEditor({ content, onChange, placeholder }: TiptapEditorProps) {
   const editor = useEditor({
@@ -113,29 +135,6 @@ export function TiptapEditor({ content, onChange, placeholder }: TiptapEditorPro
   if (!editor) {
     return null
   }
-
-  const MenuButton = ({ 
-    onClick, 
-    isActive = false, 
-    children 
-  }: { 
-    onClick: () => void, 
-    isActive?: boolean, 
-    children: React.ReactNode 
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "p-2 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90",
-        isActive 
-          ? "bg-wise-green text-wise-green-dark shadow-sm" 
-          : "text-muted-foreground hover:bg-near-black/5 hover:text-near-black"
-      )}
-    >
-      {children}
-    </button>
-  )
 
   return (
     <div className="w-full border border-border rounded-[30px] overflow-hidden bg-white shadow-ring">

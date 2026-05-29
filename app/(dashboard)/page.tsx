@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Main Chart */}
-      <div className="rounded-[40px] bg-white p-2 shadow-ring overflow-hidden">
+      <div className="rounded-[40px] bg-white p-8 shadow-ring">
         <GrowthChart data={data.revenueTrend} />
       </div>
 

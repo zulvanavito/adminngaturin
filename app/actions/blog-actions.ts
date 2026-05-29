@@ -4,6 +4,27 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { BlogPost, CreateBlogPost } from '@/types/blog'
 import { revalidatePath } from 'next/cache'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { r2Client } from '@/lib/r2'
+
+/**
+ * Helper to delete a file from R2 given its CDN URL.
+ */
+async function deleteFromR2(cdnUrl: string | undefined | null) {
+  if (!cdnUrl) return
+  
+  try {
+    const cdnBase = process.env.NEXT_PUBLIC_R2_CDN_URL || ''
+    const key = cdnUrl.replace(cdnBase.endsWith('/') ? cdnBase : cdnBase + '/', '')
+    
+    await r2Client.send(new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME || 'ngaturinblogmedia',
+      Key: key
+    }))
+  } catch (err) {
+    console.warn('Failed to delete orphaned image from R2:', err)
+  }
+}
 
 /**
  * Fetches all blog posts, ordered by creation date descending.
@@ -35,6 +56,24 @@ export async function getBlogPostAction(slug: string): Promise<BlogPost> {
 
   if (error) {
     console.error(`Error fetching blog post with slug ${slug}:`, error)
+    throw new Error(error.message)
+  }
+  return data
+}
+
+/**
+ * Fetches a single blog post by its ID.
+ */
+export async function getBlogPostByIdAction(id: string): Promise<BlogPost> {
+  const adminSupabase = createAdminClient()
+  const { data, error } = await adminSupabase
+    .from('blog_posts')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    console.error(`Error fetching blog post with ID ${id}:`, error)
     throw new Error(error.message)
   }
   return data
@@ -84,6 +123,13 @@ export async function upsertBlogPostAction(data: CreateBlogPost & { id?: string 
 
   let result
   if (data.id) {
+    // Fetch old post to check for orphaned media
+    const { data: oldPost } = await adminSupabase
+      .from('blog_posts')
+      .select('cover_image_url')
+      .eq('id', data.id)
+      .single()
+
     // Update existing post
     result = await adminSupabase
       .from('blog_posts')
@@ -91,6 +137,11 @@ export async function upsertBlogPostAction(data: CreateBlogPost & { id?: string 
       .eq('id', data.id)
       .select()
       .single()
+
+    // Cleanup old image if replaced
+    if (result.data && oldPost?.cover_image_url && oldPost.cover_image_url !== result.data.cover_image_url) {
+      await deleteFromR2(oldPost.cover_image_url)
+    }
   } else {
     // Create new post
     result = await adminSupabase
@@ -163,10 +214,10 @@ export async function deleteBlogPostAction(id: string) {
     throw new Error('Insufficient permissions')
   }
 
-  // Get post details before deletion for revalidation and audit log
+  // Get post details before deletion for revalidation, audit log, and media cleanup
   const { data: post, error: fetchError } = await adminSupabase
     .from('blog_posts')
-    .select('slug, status, title')
+    .select('slug, status, title, cover_image_url')
     .eq('id', id)
     .single()
 
@@ -182,6 +233,11 @@ export async function deleteBlogPostAction(id: string) {
   if (deleteError) {
     console.error('Error deleting blog post:', deleteError)
     throw new Error(deleteError.message)
+  }
+
+  // Cleanup media from R2
+  if (post.cover_image_url) {
+    await deleteFromR2(post.cover_image_url)
   }
 
   // Record action in audit logs

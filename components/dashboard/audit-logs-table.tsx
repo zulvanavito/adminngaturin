@@ -47,6 +47,8 @@ export interface AuditLog {
   created_at: string
 }
 
+import Fuse from 'fuse.js'
+
 interface AuditLogsTableProps {
   data: AuditLog[]
 }
@@ -58,9 +60,20 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
   const [globalFilter, setGlobalFilter] = React.useState('')
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [lastSync, setLastSync] = React.useState<Date>(new Date())
-
-  // Detail Dialog States
   const [selectedLog, setSelectedLog] = React.useState<AuditLog | null>(null)
+
+  // Fuzzy search logic with Fuse.js
+  const filteredData = React.useMemo(() => {
+    if (!globalFilter) return data
+
+    const fuse = new Fuse(data, {
+      keys: ['action', 'admin_name', 'admin_email'],
+      threshold: 0.3,
+      ignoreLocation: true,
+    })
+
+    return fuse.search(globalFilter).map(result => result.item)
+  }, [data, globalFilter])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -148,7 +161,7 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
   ]
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -159,9 +172,7 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
     state: {
       sorting,
       columnFilters,
-      globalFilter,
     },
-    onGlobalFilterChange: setGlobalFilter,
   })
 
   return (

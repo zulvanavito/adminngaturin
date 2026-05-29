@@ -31,17 +31,23 @@ import {
     Edit,
     ExternalLink,
     CheckCircle2,
-    Eye
+    Eye,
+    Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
+import { deleteBlogPostAction } from '@/app/actions/blog-actions'
+import { useRouter } from 'next/navigation'
+
+import Fuse from 'fuse.js'
 
 interface BlogTableProps {
   data: BlogPost[]
 }
 
 export function BlogTable({ data }: BlogTableProps) {
+  const router = useRouter()
   const queryClient = useQueryClient()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -49,11 +55,37 @@ export function BlogTable({ data }: BlogTableProps) {
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [lastSync, setLastSync] = React.useState<Date>(new Date())
 
+  // Fuzzy search logic with Fuse.js
+  const filteredData = React.useMemo(() => {
+    if (!globalFilter) return data
+
+    const fuse = new Fuse(data, {
+      keys: ['title', 'slug', 'category', 'status'],
+      threshold: 0.3,
+      ignoreLocation: true,
+    })
+
+    return fuse.search(globalFilter).map(result => result.item)
+  }, [data, globalFilter])
+
   const handleRefresh = async () => {
+
     setIsRefreshing(true)
     await queryClient.invalidateQueries({ queryKey: ['blog-posts'] })
     setLastSync(new Date())
     setTimeout(() => setIsRefreshing(false), 500)
+  }
+
+  const handleDelete = async (id: string, title: string) => {
+    if (confirm(`Are you sure you want to delete "${title}"?`)) {
+        try {
+            await deleteBlogPostAction(id)
+            router.refresh()
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error'
+            alert(`Error deleting post: ${message}`)
+        }
+    }
   }
 
   const columns: ColumnDef<BlogPost>[] = [
@@ -120,12 +152,21 @@ export function BlogTable({ data }: BlogTableProps) {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Link href={`/blog/edit/${row.original.id}`}>
-            <Button variant="secondary" size="sm" className="h-8 w-8 p-0">
+            <Button variant="secondary" size="sm" className="h-8 w-8 p-0" title="Edit Post">
               <Edit className="h-4 w-4" />
             </Button>
           </Link>
-          <Button variant="secondary" size="sm" className="h-8 w-8 p-0" onClick={() => window.open(`https://ngaturin.com/blog/${row.original.slug}`, '_blank')}>
+          <Button variant="secondary" size="sm" className="h-8 w-8 p-0" title="View Publicly" onClick={() => window.open(`https://ngaturin.com/blog/${row.original.slug}`, '_blank')}>
             <ExternalLink className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" 
+            title="Delete Post"
+            onClick={() => handleDelete(row.original.id, row.original.title)}
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ),
@@ -133,7 +174,7 @@ export function BlogTable({ data }: BlogTableProps) {
   ]
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -144,9 +185,7 @@ export function BlogTable({ data }: BlogTableProps) {
     state: {
       sorting,
       columnFilters,
-      globalFilter,
     },
-    onGlobalFilterChange: setGlobalFilter,
   })
 
   return (

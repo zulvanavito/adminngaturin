@@ -49,6 +49,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+import Fuse from 'fuse.js'
+
 interface UsersTableProps {
   data: CombinedUser[]
 }
@@ -61,6 +63,19 @@ export function UsersTable({ data }: UsersTableProps) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [lastSync, setLastSync] = React.useState<Date>(new Date())
+
+  // Fuzzy search logic with Fuse.js
+  const filteredData = React.useMemo(() => {
+    if (!globalFilter) return data
+    
+    const fuse = new Fuse(data, {
+      keys: ['display_name', 'email', 'role', 'status', 'plan'],
+      threshold: 0.3,
+      ignoreLocation: true,
+    })
+    
+    return fuse.search(globalFilter).map(result => result.item)
+  }, [data, globalFilter])
 
   // Bulk Dialog States
   const [showBulkDeleteModal, setShowBulkDeleteModal] = React.useState(false)
@@ -91,6 +106,7 @@ export function UsersTable({ data }: UsersTableProps) {
   })
 
   const columns: ColumnDef<CombinedUser>[] = [
+    // ... rest of columns
     {
       id: 'select',
       header: ({ table }) => (
@@ -189,7 +205,7 @@ export function UsersTable({ data }: UsersTableProps) {
   ]
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -201,10 +217,8 @@ export function UsersTable({ data }: UsersTableProps) {
     state: {
       sorting,
       columnFilters,
-      globalFilter,
       rowSelection,
     },
-    onGlobalFilterChange: setGlobalFilter,
   })
 
   const selectedRows = table.getSelectedRowModel().rows

@@ -27,6 +27,8 @@ import { BillingActions } from './billing-actions'
 import { reconcileBatchAction } from '@/app/actions/billing-actions'
 import { RefreshCcw, Loader2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 
+import Fuse from 'fuse.js'
+
 interface BillingTableProps {
   data: SubscriptionLog[]
 }
@@ -36,6 +38,19 @@ export function BillingTable({ data }: BillingTableProps) {
   const [globalFilter, setGlobalFilter] = React.useState('')
   const [isReconciling, setIsReconciling] = React.useState(false)
   const [reconcileProgress, setReconcileProgress] = React.useState(0)
+
+  // Fuzzy search logic with Fuse.js
+  const filteredData = React.useMemo(() => {
+    if (!globalFilter) return data
+    
+    const fuse = new Fuse(data, {
+      keys: ['midtrans_order_id', 'status', 'payment_type', 'email', 'display_name'],
+      threshold: 0.3,
+      ignoreLocation: true,
+    })
+    
+    return fuse.search(globalFilter).map(result => result.item)
+  }, [data, globalFilter])
 
   const runReconciliation = async () => {
     const pendingLogs = data.filter(log => log.status === 'pending')
@@ -131,7 +146,7 @@ export function BillingTable({ data }: BillingTableProps) {
   ]
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -140,9 +155,7 @@ export function BillingTable({ data }: BillingTableProps) {
     getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
-      globalFilter,
     },
-    onGlobalFilterChange: setGlobalFilter,
   })
 
   return (

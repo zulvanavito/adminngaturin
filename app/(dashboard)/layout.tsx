@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/shared/Sidebar"
+import { Toaster } from "@/components/ui/toaster"
 
 export default function DashboardLayout({
   children,
@@ -8,7 +9,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen bg-light-surface/30">
       {/* Permanent Sidebar for Desktop */}
-      <aside className="hidden md:flex h-full">
+      <aside className="hidden md:flex h-full transition-all duration-300">
         <Sidebar />
       </aside>
 
@@ -21,6 +22,8 @@ export default function DashboardLayout({
           </div>
         </div>
       </main>
+
+      <Toaster />
     </div>
   )
 }

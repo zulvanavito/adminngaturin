@@ -16,8 +16,8 @@ interface GrowthChartProps {
 
 export function GrowthChart({ data }: GrowthChartProps) {
   return (
-    <div className="wise-card h-[400px] w-full p-8 flex flex-col">
-      <div className="mb-6">
+    <div className="h-[400px] w-full flex flex-col">
+      <div className="mb-6 px-4">
         <h3 className="text-[22px] font-black text-near-black uppercase tracking-tight">Revenue Growth</h3>
         <p className="text-[14px] font-semibold text-wise-gray uppercase tracking-widest">Growth Trend (Last 7 Days)</p>
       </div>
@@ -57,7 +57,7 @@ export function GrowthChart({ data }: GrowthChartProps) {
                     fontWeight: '900'
                 }}
                 itemStyle={{ color: '#0e0f0c' }}
-                formatter={(value: number) => [new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value), 'Revenue']}
+                formatter={(value: any) => [new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value)), 'Revenue']}
                 cursor={{ stroke: '#003333', strokeWidth: 2 }}
             />
             <Area 
