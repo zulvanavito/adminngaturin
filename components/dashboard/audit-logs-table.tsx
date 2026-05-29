@@ -28,7 +28,8 @@ import {
     ChevronRight, 
     RefreshCcw, 
     CheckCircle2,
-    Eye
+    Eye,
+    Filter
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -36,6 +37,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog"
+import { useFilterStore } from '@/lib/store/filter-store'
 
 export interface AuditLog {
   id: string
@@ -62,18 +64,28 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
   const [lastSync, setLastSync] = React.useState<Date>(new Date())
   const [selectedLog, setSelectedLog] = React.useState<AuditLog | null>(null)
 
-  // Fuzzy search logic with Fuse.js
-  const filteredData = React.useMemo(() => {
-    if (!globalFilter) return data
+  const { audit: auditFilters, setFilter } = useFilterStore()
 
-    const fuse = new Fuse(data, {
+  // Combined filter logic
+  const filteredData = React.useMemo(() => {
+    let result = data
+
+    // 1. Filter by Action from Zustand
+    if (auditFilters.action) {
+      result = result.filter(log => log.action.includes(auditFilters.action))
+    }
+
+    // 2. Fuzzy search with Fuse.js
+    if (!globalFilter) return result
+
+    const fuse = new Fuse(result, {
       keys: ['action', 'admin_name', 'admin_email'],
       threshold: 0.3,
       ignoreLocation: true,
     })
 
     return fuse.search(globalFilter).map(result => result.item)
-  }, [data, globalFilter])
+  }, [data, globalFilter, auditFilters.action])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -312,6 +324,28 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
                 <div className="bg-near-black/[0.03] rounded-wise-md p-6 border border-border overflow-auto max-h-[400px]">
                     <pre className="text-xs font-mono text-near-black leading-relaxed">
                         {JSON.stringify(selectedLog.details, null, 2)}
+                    </pre>
+                </div>
+                
+                <div className="mt-8 flex justify-end">
+                    <Button 
+                        variant="secondary" 
+                        onClick={() => setSelectedLog(null)}
+                        className="btn-pill bg-near-black text-white hover:bg-near-black/90"
+                    >
+                        Close Inspector
+                    </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+)}
                     </pre>
                 </div>
                 

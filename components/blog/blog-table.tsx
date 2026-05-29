@@ -32,13 +32,16 @@ import {
     ExternalLink,
     CheckCircle2,
     Eye,
-    Trash2
+    Trash2,
+    Filter
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { deleteBlogPostAction } from '@/app/actions/blog-actions'
 import { useRouter } from 'next/navigation'
+import { useNotificationStore } from '@/lib/store/notification-store'
+import { useFilterStore } from '@/lib/store/filter-store'
 
 import Fuse from 'fuse.js'
 
@@ -55,18 +58,39 @@ export function BlogTable({ data }: BlogTableProps) {
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [lastSync, setLastSync] = React.useState<Date>(new Date())
 
-  // Fuzzy search logic with Fuse.js
-  const filteredData = React.useMemo(() => {
-    if (!globalFilter) return data
+  const { blog: blogFilters, setFilter } = useFilterStore()
 
-    const fuse = new Fuse(data, {
+  // Extract unique categories
+  const categories = React.useMemo(() => {
+    const cats = new Set(data.map(post => post.category))
+    return Array.from(cats).sort()
+  }, [data])
+
+  // Combined filter logic
+  const filteredData = React.useMemo(() => {
+    let result = data
+
+    // 1. Filter by Status from Zustand
+    if (blogFilters.status) {
+      result = result.filter(post => post.status === blogFilters.status)
+    }
+
+    // 2. Filter by Category from Zustand
+    if (blogFilters.category) {
+      result = result.filter(post => post.category === blogFilters.category)
+    }
+
+    // 3. Fuzzy search with Fuse.js
+    if (!globalFilter) return result
+
+    const fuse = new Fuse(result, {
       keys: ['title', 'slug', 'category', 'status'],
       threshold: 0.3,
       ignoreLocation: true,
     })
 
     return fuse.search(globalFilter).map(result => result.item)
-  }, [data, globalFilter])
+  }, [data, globalFilter, blogFilters.status, blogFilters.category])
 
   const handleRefresh = async () => {
 
@@ -83,7 +107,7 @@ export function BlogTable({ data }: BlogTableProps) {
             router.refresh()
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error'
-            alert(`Error deleting post: ${message}`)
+            useNotificationStore.getState().addToast('error', `Error deleting post: ${message}`)
         }
     }
   }
@@ -201,6 +225,32 @@ export function BlogTable({ data }: BlogTableProps) {
                 className="w-full rounded-wise-pill border border-border bg-white pl-10 pr-4 py-2 text-sm font-semibold outline-none focus:ring-1 focus:ring-wise-cyan transition-all"
             />
             </div>
+
+            <div className="flex items-center gap-2 bg-white border border-border rounded-wise-pill px-3 py-1.5 shadow-sm">
+                <Filter className="h-3 w-3 text-wise-gray" />
+                <select 
+                    className="bg-transparent text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-near-black pr-2"
+                    value={blogFilters.status}
+                    onChange={(e) => setFilter('blog', 'status', e.target.value)}
+                >
+                    <option value="">All Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                </select>
+                <div className="w-[1px] h-3 bg-border" />
+                <select 
+                    className="bg-transparent text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-near-black pr-2"
+                    value={blogFilters.category}
+                    onChange={(e) => setFilter('blog', 'category', e.target.value)}
+                >
+                    <option value="">All Categories</option>
+                    {categories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                </select>
+            </div>
+
             <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase text-wise-gray tracking-widest leading-tight">Sync Status</span>
                 <span className="text-[10px] font-bold text-near-black flex items-center gap-1">
