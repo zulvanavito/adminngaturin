@@ -150,6 +150,23 @@ export function UsersTable({ data }: UsersTableProps) {
       ),
     },
     {
+      accessorKey: 'plan',
+      header: 'Plan',
+      cell: ({ row }) => {
+        const plan = row.getValue('plan') as string
+        return (
+          <span className={cn(
+            "px-2 py-1 rounded-wise-sm text-[10px] font-black uppercase tracking-widest",
+            plan === 'pro' ? "bg-purple-100 text-purple-700" : 
+            plan === 'plus' ? "bg-blue-100 text-blue-700" : 
+            "bg-gray-100 text-gray-500"
+          )}>
+            {plan}
+          </span>
+        )
+      },
+    },
+    {
       accessorKey: 'gamification.level',
       header: 'Level',
       cell: ({ row }) => <span className="text-sm font-black text-near-black">Lvl {row.original.gamification?.level || 1}</span>,
