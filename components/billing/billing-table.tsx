@@ -22,9 +22,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { SubscriptionLog } from '@/types/billing'
 import { format } from 'date-fns'
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BillingActions } from './billing-actions'
+import { reconcileBatchAction } from '@/app/actions/billing-actions'
+import { RefreshCcw, Loader2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface BillingTableProps {
   data: SubscriptionLog[]
@@ -33,6 +34,40 @@ interface BillingTableProps {
 export function BillingTable({ data }: BillingTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = React.useState('')
+  const [isReconciling, setIsReconciling] = React.useState(false)
+  const [reconcileProgress, setReconcileProgress] = React.useState(0)
+
+  const runReconciliation = async () => {
+    const pendingLogs = data.filter(log => log.status === 'pending')
+    if (pendingLogs.length === 0) return
+
+    setIsReconciling(true)
+    setReconcileProgress(0)
+
+    const batchSize = 5
+    const total = pendingLogs.length
+    let processedCount = 0
+
+    // Process in batches of 5
+    for (let i = 0; i < total; i += batchSize) {
+      const batch = pendingLogs.slice(i, i + batchSize)
+      const orderIds = batch.map(log => log.midtrans_order_id).filter((id): id is string => !!id)
+      
+      if (orderIds.length > 0) {
+        try {
+          await reconcileBatchAction(orderIds)
+        } catch (error) {
+          console.error("Batch reconciliation error:", error)
+        }
+      }
+      
+      processedCount += batch.length
+      setReconcileProgress(Math.round((processedCount / total) * 100))
+    }
+
+    setIsReconciling(false)
+    setTimeout(() => setReconcileProgress(0), 2000)
+  }
 
   const columns: ColumnDef<SubscriptionLog>[] = [
     {
@@ -112,7 +147,7 @@ export function BillingTable({ data }: BillingTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="relative w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-wise-gray" />
           <input
@@ -121,6 +156,39 @@ export function BillingTable({ data }: BillingTableProps) {
             onChange={(event) => setGlobalFilter(event.target.value)}
             className="w-full rounded-wise-pill border border-border bg-white pl-10 pr-4 py-2 text-sm font-semibold outline-none focus:ring-1 focus:ring-wise-cyan transition-all"
           />
+        </div>
+
+        <div className="flex items-center gap-4 flex-1 justify-end">
+          {(isReconciling || reconcileProgress > 0) && (
+            <div className="flex flex-col items-end gap-1 flex-1 max-w-[200px]">
+              <div className="flex justify-between w-full px-1">
+                <span className="text-[10px] font-black uppercase text-near-black">
+                  {isReconciling ? "Syncing..." : "Sync Complete"}
+                </span>
+                <span className="text-[10px] font-black text-near-black">{reconcileProgress}%</span>
+              </div>
+              <div className="w-full h-2.5 bg-wise-gray/10 rounded-full overflow-hidden border border-near-black/5">
+                <div 
+                  className="h-full bg-wise-green transition-all duration-500 ease-out" 
+                  style={{ width: `${reconcileProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <Button
+            onClick={runReconciliation}
+            disabled={isReconciling || data.filter(l => l.status === 'pending').length === 0}
+            variant="default"
+            className="font-bold min-w-[140px]"
+          >
+            {isReconciling ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCcw className="h-4 w-4 mr-2" />
+            )}
+            {isReconciling ? "Processing..." : `Reconcile Pending (${data.filter(l => l.status === 'pending').length})`}
+          </Button>
         </div>
       </div>
 
