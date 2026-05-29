@@ -15,7 +15,8 @@ import {
   adjustXpAction, 
   suspendUserAction, 
   deleteUserAction,
-  grantManualSubscriptionAction
+  grantManualSubscriptionAction,
+  revokeSubscriptionAction
 } from '@/app/actions/user-actions'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -51,12 +52,16 @@ export function UserActions({ user }: UserActionsProps) {
   const [grantDuration, setGrantDuration] = useState('30')
   const [grantReason, setGrantReason] = useState('')
 
+  const [isRevoking, setIsRevoking] = useState(false)
+  const [revokeReason, setRevokeReason] = useState('')
+
   const mutation = useMutation({
     mutationFn: async ({ type, payload }: { type: string, payload: { amount?: number; reason?: string; status?: string; planId?: 'plus' | 'pro'; duration?: number } }) => {
       if (type === 'xp') return adjustXpAction(user.user_id, payload.amount!, payload.reason!)
       if (type === 'suspend') return suspendUserAction(user.user_id, payload.status as 'active' | 'suspended')
       if (type === 'delete') return deleteUserAction(user.user_id, payload.reason!)
       if (type === 'grant') return grantManualSubscriptionAction(user.user_id, payload.planId!, payload.duration!, payload.reason!)
+      if (type === 'revoke') return revokeSubscriptionAction(user.user_id, payload.reason!)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -72,6 +77,8 @@ export function UserActions({ user }: UserActionsProps) {
       setGrantReason('')
       setGrantPlan('plus')
       setGrantDuration('30')
+      setIsRevoking(false)
+      setRevokeReason('')
     },
     onError: (error: Error) => {
       alert(`Error: ${error.message}`)
@@ -93,6 +100,11 @@ export function UserActions({ user }: UserActionsProps) {
         reason: grantReason 
       } 
     })
+  }
+
+  const handleRevokeSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    mutation.mutate({ type: 'revoke', payload: { reason: revokeReason } })
   }
 
   const handleSuspendToggle = () => {
@@ -353,6 +365,59 @@ export function UserActions({ user }: UserActionsProps) {
                     placeholder="e.g. Customer support compensation, Giveaway winner"
                 />
             </div>
+
+            {user.plan !== 'free' && (
+              <div className="mt-6 pt-6 border-t border-red-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <h4 className="text-xs font-black uppercase tracking-widest text-red-600">Danger Zone: Revoke Access</h4>
+                </div>
+                {!isRevoking ? (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-600"
+                    onClick={() => setIsRevoking(true)}
+                  >
+                    Revoke Current {user.plan.toUpperCase()} Plan
+                  </Button>
+                ) : (
+                  <div className="space-y-3 bg-red-50 p-4 rounded-wise-sm border border-red-100">
+                    <div className="space-y-2">
+                      <label htmlFor="revoke-reason" className="text-[10px] font-black uppercase tracking-widest text-red-900/50">Reason for Revocation</label>
+                      <textarea 
+                        id="revoke-reason"
+                        value={revokeReason}
+                        onChange={(e) => setRevokeReason(e.target.value)}
+                        required
+                        rows={2}
+                        className="w-full rounded-wise-sm border border-red-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-1 focus:ring-red-600"
+                        placeholder="e.g. Payment issue, Subscription abuse"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        type="button" 
+                        variant="secondary" 
+                        className="flex-1"
+                        onClick={() => setIsRevoking(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="button" 
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        onClick={handleRevokeSubmit}
+                        disabled={!revokeReason || mutation.isPending}
+                      >
+                        {mutation.isPending ? 'Revoking...' : 'Confirm Revoke'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <DialogFooter>
                 <Button variant="secondary" type="button" onClick={() => setShowGrantModal(false)}>Cancel</Button>
                 <Button type="submit" disabled={mutation.isPending} className="bg-purple-600 hover:bg-purple-700 text-white">
