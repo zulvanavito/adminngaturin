@@ -9,14 +9,16 @@ import {
   Receipt, 
   PenTool, 
   LogOut,
-  ShieldAlert
+  ShieldAlert,
+  History
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const navigation = [
   { name: 'Overview', href: '/', icon: LayoutDashboard },
   { name: 'User Directory', href: '/users', icon: Users },
-  { name: 'Billing & Audit', href: '/billing', icon: Receipt },
+  { name: 'Billing & Reconciliation', href: '/billing', icon: Receipt },
+  { name: 'Audit Logs', href: '/audit-logs', icon: History },
   { name: 'Headless CMS', href: '/blog', icon: PenTool },
 ]
 

@@ -86,3 +86,28 @@ export async function getAnalyticsAction() {
     timestamp: new Date().toISOString()
   }
 }
+
+export async function getAuditLogsAction() {
+  const adminSupabase = createAdminClient()
+  
+  const [logsRes, authRes] = await Promise.all([
+    adminSupabase
+      .from('admin_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100),
+    adminSupabase.rpc('get_auth_users_data')
+  ])
+
+  if (logsRes.error) throw new Error(logsRes.error.message)
+  
+  const authMap = new Map<string, { email: string; full_name: string }>(
+    (authRes.data || []).map((u: any) => [u.id, u])
+  )
+
+  return (logsRes.data || []).map((log: any) => ({
+    ...log,
+    admin_name: authMap.get(log.admin_id)?.full_name || 'System/Unknown',
+    admin_email: authMap.get(log.admin_id)?.email
+  }))
+}
