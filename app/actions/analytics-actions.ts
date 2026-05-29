@@ -101,11 +101,25 @@ export async function getAuditLogsAction() {
 
   if (logsRes.error) throw new Error(logsRes.error.message)
   
-  const authMap = new Map<string, { email: string; full_name: string }>(
-    (authRes.data || []).map((u: any) => [u.id, u])
+  interface AuthUserData {
+    id: string
+    email: string
+    full_name: string
+  }
+
+  const authMap = new Map<string, AuthUserData>(
+    (authRes.data as AuthUserData[] || []).map((u) => [u.id, u])
   )
 
-  return (logsRes.data || []).map((log: any) => ({
+  interface RawLog {
+    id: string
+    admin_id: string
+    action: string
+    details: Record<string, unknown>
+    created_at: string
+  }
+
+  return (logsRes.data as RawLog[] || []).map((log) => ({
     ...log,
     admin_name: authMap.get(log.admin_id)?.full_name || 'System/Unknown',
     admin_email: authMap.get(log.admin_id)?.email

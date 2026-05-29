@@ -31,12 +31,10 @@ import {
     Eye
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog"
 
 export interface AuditLog {
@@ -45,7 +43,7 @@ export interface AuditLog {
   admin_name: string
   admin_email?: string
   action: string
-  details: any
+  details: Record<string, unknown>
   created_at: string
 }
 
@@ -54,7 +52,7 @@ interface AuditLogsTableProps {
 }
 
 export function AuditLogsTable({ data }: AuditLogsTableProps) {
-  const queryClient = useQueryClient()
+  const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = React.useState('')
@@ -66,7 +64,7 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await queryClient.invalidateQueries({ queryKey: ['audit-logs'] })
+    router.refresh()
     setLastSync(new Date())
     setTimeout(() => setIsRefreshing(false), 500)
   }
@@ -75,16 +73,19 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
     {
       accessorKey: 'created_at',
       header: 'Timestamp',
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span className="text-sm font-black text-near-black">
-            {format(new Date(row.getValue('created_at')), 'dd MMM yyyy')}
-          </span>
-          <span className="text-[10px] text-wise-gray font-semibold">
-            {format(new Date(row.getValue('created_at')), 'HH:mm:ss')}
-          </span>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const date = new Date(row.getValue('created_at'))
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm font-black text-near-black">
+              {format(date, 'dd MMM yyyy')}
+            </span>
+            <span className="text-[10px] text-wise-gray font-semibold">
+              {format(date, 'HH:mm:ss')}
+            </span>
+          </div>
+        )
+      },
     },
     {
       id: 'admin',
@@ -118,7 +119,7 @@ export function AuditLogsTable({ data }: AuditLogsTableProps) {
       id: 'summary',
       header: 'Summary',
       cell: ({ row }) => {
-        const details = row.original.details
+        const details = row.original.details as Record<string, string>
         let summary = 'View details'
         if (details.reason) summary = details.reason
         else if (details.target_user_id) summary = `Target: ${details.target_user_id.split('-')[0]}...`
