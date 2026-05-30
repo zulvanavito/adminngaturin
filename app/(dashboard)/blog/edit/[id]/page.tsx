@@ -68,30 +68,65 @@ export default function EditBlogPostPage({ params }: { params: Promise<{ id: str
     if (e.target.files?.length) {
       setIsUploadingCover(true)
       const file = e.target.files[0]
+      console.log('Starting cover upload:', { name: file.name, size: file.size, type: file.type })
       
       try {
+        const contentType = file.type || 'application/octet-stream'
         const res = await fetch('/api/admin/blog/media/presigned-url', {
           method: 'POST',
           body: JSON.stringify({
             filename: file.name,
-            contentType: file.type,
+            contentType,
           }),
         })
         
-        if (!res.ok) throw new Error('Failed to get upload URL')
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(`Failed to get upload URL: ${res.status} ${errorData.error || ''}`)
+        }
+
         const { uploadUrl, cdnUrl } = await res.json()
+        
+        try {
+          const urlObj = new URL(uploadUrl)
+          console.log('Presigned URL received:', {
+            hostname: urlObj.hostname,
+            pathname: urlObj.pathname,
+            protocol: urlObj.protocol
+          })
+          
+          if (urlObj.hostname.includes('undefined')) {
+            throw new Error('R2_ACCOUNT_ID is missing or invalid in .env.local')
+          }
+        } catch (e) {
+          console.error('Invalid upload URL received:', uploadUrl)
+          throw new Error('Server returned an invalid upload URL. Check R2 environment variables.')
+        }
+
+        console.log('Proceeding to R2 upload (PUT)...')
         
         const uploadRes = await fetch(uploadUrl, {
           method: 'PUT',
           body: file,
-          headers: { 'Content-Type': file.type },
+          headers: { 'Content-Type': contentType },
+          mode: 'cors',
+          credentials: 'omit'
+        }).catch(err => {
+          console.error('Fetch to R2 failed at network level:', err)
+          // This is usually CORS or DNS
+          throw new Error(`Network error during R2 upload. This is most likely a CORS issue. Ensure your R2 bucket CORS policy allows PUT from this origin. Details: ${err.message}`)
         })
         
-        if (!uploadRes.ok) throw new Error('Failed to upload image')
+        if (!uploadRes.ok) {
+          throw new Error(`R2 upload failed with status ${uploadRes.status}: ${uploadRes.statusText}`)
+        }
+
+        console.log('R2 upload successful:', cdnUrl)
         setCoverImageUrl(cdnUrl)
       } catch (error) {
-        console.error('Upload error:', error)
-        useNotificationStore.getState().addToast('error', 'Failed to upload cover image')
+        console.error('Upload error detail:', error)
+        const message = error instanceof Error ? error.message : 'Unknown upload error'
+        useNotificationStore.getState().addToast('error', `Upload failed: ${message}`)
       } finally {
         setIsUploadingCover(false)
       }

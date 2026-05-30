@@ -30,14 +30,15 @@ export async function GET(request: NextRequest) {
     if (!filename) return NextResponse.json({ error: "Filename is required" }, { status: 400 });
 
     const key = `blog/${Date.now()}-${filename}`;
+    const bucketName = process.env.R2_BUCKET_NAME || "ngaturinblogmedia";
     const command = new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
+      Bucket: bucketName,
       Key: key,
       ContentType: contentType,
     });
 
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 });
-    const cdnUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${key}`;
+    const cdnUrl = `${process.env.NEXT_PUBLIC_R2_CDN_URL}/${key}`;
 
     return NextResponse.json({ uploadUrl, cdnUrl });
   } catch (error) {
